@@ -116,6 +116,146 @@ class Label(Music21Object):
         '''
         return self.offset + self.duration.quarterLength
 
+    def __eq__(self, other):
+        '''
+        return True iff this Label equals `other`, that is
+        the offset, duration, kind, tag, and weight are equal
+        '''
+        if not isinstance(other, Label):
+            return False
+
+        return (
+            self.offset == other.offset and
+            self.duration == other.duration and
+            self.kind == other.kind and
+            self.tag == other.tag and
+            self.weight == other.weight
+        )
+
+    def __hash__(self):
+        # Enable 'label in list' with python3
+        return id(self)
+
+    def compare(
+            self,
+            other,
+            checkKind=True,
+            checkTag=False,
+            startDeltaOffset=0,  # epsilon
+            endDeltaOffset=0     # epsilon
+    ):
+        '''
+        Compares this Label with `other`, possibly checking the kind (`checkKind`) and the tag (`checkTag`)
+        are equal, and the difference of the start/end offsets of the labels are lower or equal
+        than `startDeltaOffset`/`endDeltaOffset`
+
+        >>> from music21.schema import Label
+        >>> label = Label(offset=1, duration=4, kind="kind", tag="tag")
+        >>> labelTest1 = Label(offset=1, duration=4, kind="kind", tag="otherTag")
+        >>> label.compare(labelTest1)
+        True
+        >>> label.compare(labelTest1, checkTag=True)
+        False
+        >>> labelTest2 = Label(offset=1.5, duration=3.5, kind="kind", tag="otherTag")
+        >>> label.compare(labelTest2)
+        False
+        >>> label.compare(labelTest2, startDeltaOffset=1)
+        True
+        >>> labelTest3 = Label(offset=1, duration=3.5, kind="otherKind", tag="otherTag")
+        >>> label.compare(labelTest3)
+        False
+        >>> label.compare(labelTest3, checkKind=False, endDeltaOffset=0.5)
+        True
+        '''
+
+        if checkKind and not self.kind == other.kind:
+            return False
+
+        if checkTag and (not self.tag == other.tag):
+            return False
+
+        if math.fabs(self.offset - other.offset) > startDeltaOffset:
+            return False
+
+        if math.fabs(self.end - other.end) > endDeltaOffset:
+            return False
+
+        return True
+
+    def __ne__(self, other):
+        '''
+        return True iff this Label not equals `other`
+        '''
+        return not self.__eq__(other)
+
+    def intersects(self, other):
+        '''
+        Returns True iff this label intersects `other`
+
+        >>> from music21.schema import Label
+        >>> label1 = Label(offset=11, duration=8)
+        >>> label2 = Label(offset=30, duration=8)
+
+        >>> label1.intersects(label2)
+        False
+
+        >>> label3 = Label(offset=15, duration=8)
+
+        >>> label1.intersects(label3)
+        True
+        '''
+
+        start1 = self.offset
+        end1 = self.end
+        start2 = other.offset
+        end2 = other.end
+
+        return (start2 <= start1 <= end2 or
+                start2 <= end1 <= end2 or
+                start1 <= start2 <= end1 or
+                start1 <= end2 <= end1)
+
+    def containsOffset(self, offset):
+        '''
+        Returns whether the Label contains the given `offset`
+
+        >>> from music21.schema import Label
+        >>> label = Label(offset=1, duration=4)
+
+        >>> label.containsOffset(0.5)
+        False
+
+        >>> label.containsOffset(1.5)
+        True
+        '''
+        # return self.offset <= offset <= self.offset + self.duration.quarterLength
+        return self.offset <= offset <= self.end
+
+    def overlapQuarterLength(self, other):
+        """
+        Returns the length of the overlap between this Label and `other`,
+        or 0 if the labels do not overlap.
+        """
+        return max(0, min(self.end, other.end) - max(self.offset, other.offset))
+
+    def getOverlappingLabels(self, stream, kindList=None,
+                             startDeltaOffset=0,
+                             endDeltaOffset=0):
+        """
+        Returns a list of labels overlapping this Label, optionally restricted to label of kinds in `kindList`
+        Handle `startDeltaOffset` and `endDeltaOffset` XXX TODO: doc
+        """
+
+        overlappingLabels = []
+
+        for other in stream.getElementsByOffset(self.offset - startDeltaOffset, self.end + endDeltaOffset,
+                                                mustBeginInSpan=False, mustFinishInSpan=False,
+                                                classList=['Label']):
+            if (kindList is None) or (other.kind in kindList):
+                overlappingLabels.append(other)
+
+        return overlappingLabels
+
 
     def __repr__(self):
         return "<music21.schema.Label %s %s %s offset=%s duration=%s>" % (self.kind, self.tag, self.weight, self.offset, self.duration.quarterLength)
