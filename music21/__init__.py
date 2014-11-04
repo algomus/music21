@@ -121,6 +121,7 @@ __all__ = [
     'repeat',
     'roman',
     'scale',
+    'schema',
     'serial',
     'sieve',
     'spanner',
