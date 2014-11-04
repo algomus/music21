@@ -260,3 +260,108 @@ class Label(Music21Object):
     def __repr__(self):
         return "<music21.schema.Label %s %s %s offset=%s duration=%s>" % (self.kind, self.tag, self.weight, self.offset, self.duration.quarterLength)
 
+
+# -----------------------------------------------------------------------------
+
+class Test(unittest.TestCase):
+
+    def setUp(self):
+        self.label = Label(offset=1, duration=4, kind="kind", tag="tag")
+        self.labelTest = Label(offset=1, duration=4, kind="kind", tag="tag")
+
+        self.vs = music21.stream.Part()
+        self.vs.insert(0, music21.converter.parse('tinyNotation: 4/4 c4 d e c  c d e c   e f g2   e4 f g2  g8 a g f e4 c   g8 a g f e4 c  c4 g c2  c4 g c2'))
+        self.vs.makeMeasures(inPlace=True)
+        self.label.activeSite = self.vs
+
+    def testInit(self):
+        labelTest2 = Label(offset=2, duration=None, kind="kind", tag="tag")
+        labelTest3 = Label(offset=3, duration=music21.duration.Duration(5), kind="kind", tag="tag")
+        self.assertEqual(str(labelTest2), '<music21.schema.Label kind tag None offset=2.0 duration=0.0>')
+        self.assertEqual(str(labelTest3), '<music21.schema.Label kind tag None offset=3.0 duration=5.0>')
+
+    def testStr(self):
+        self.assertEqual(str(self.label), '<music21.schema.Label kind tag None offset=1.0 duration=4.0>')
+
+    def testRepr(self):
+        self.assertEqual(repr(self.label), '<music21.schema.Label kind tag None offset=1.0 duration=4.0>')
+
+    def testKindErr(self):
+        def f():
+            self.label.kind = 1
+        self.assertRaises(music21.base.ElementException, f)
+
+    def testStartEnd(self):
+        self.assertEqual(self.label.offset, 1.0)
+        self.assertEqual(self.label.end, 5.0)
+
+    def testContainsOffset(self):
+        self.assertTrue(self.label.containsOffset(3.5))
+        self.assertTrue(self.label.containsOffset(4.0))
+        self.assertFalse(self.label.containsOffset(5.5))
+
+    def testGetOverlappingLabels(self):
+        self.vs[0].insert(self.label)
+        labelTest2 = Label(offset=1, duration=40)
+        self.assertEqual(labelTest2.getOverlappingLabels(self.vs[0]), [self.label])
+
+    def testOverlapQuarterLength(self):
+        labelA = Label(offset=1, duration=4)
+        labelB = Label(offset=2, duration=5)
+        labelC = Label(offset=7, duration=2)
+        self.assertEqual(labelA.overlapQuarterLength(labelB), 3.0)
+        self.assertEqual(labelA.overlapQuarterLength(labelC), 0.0)
+
+    def testEq(self):
+        self.assertEqual(self.label, self.labelTest)
+
+    def testEqOther(self):
+        self.assertNotEqual(self.label, music21.duration.Duration(5))
+
+    def testEqNotSameKind(self):
+        self.labelTest.kind = self.label.kind + "other"
+        self.assertNotEqual(self.label, self.labelTest)
+
+    def testCompare(self):
+        self.assertTrue(self.label.compare(self.labelTest))
+
+    def testCompareNotSameKind(self):
+        self.labelTest.kind = self.label.kind + "other"
+        self.assertTrue(self.label.compare(self.labelTest, checkKind=False))
+
+    def testCompareNotSameTag(self):
+        self.labelTest.tag = self.label.tag + "other"
+        self.assertTrue(self.label.compare(self.labelTest))
+        self.assertFalse(self.label.compare(self.labelTest, checkTag=True))
+
+    def testCompareNotSameOffset(self):
+        self.labelTest.offset = self.label.offset + 1
+        self.labelTest.duration = music21.duration.Duration(self.label.duration.quarterLength - 1.0)
+
+        self.assertFalse(self.label.compare(self.labelTest))
+        self.assertTrue(self.label.compare(self.labelTest, startDeltaOffset=2), "%s %s" % (self.label, self.labelTest))
+
+    def testCompareNotSameDuration(self):
+        self.labelTest.duration = music21.duration.Duration(self.label.duration.quarterLength + 1.0)
+        self.assertFalse(self.label.compare(self.labelTest))
+        self.assertTrue(self.label.compare(self.labelTest, endDeltaOffset=2), "%s %s" % (self.label, self.labelTest))
+
+    def testLabelEqualityShouldTakeTagsIntoAccount(self):
+        self.labelTest.tag = self.label.tag + "other"
+        self.assertNotEqual(self.label, self.labelTest)
+
+    def testEqNotSameWeight(self):
+        self.labelTest.weight = "other"
+        self.assertNotEqual(self.label, self.labelTest)
+
+    def testEqNotSameOffset(self):
+        self.labelTest.offset = self.label.offset + 1
+        self.assertNotEqual(self.label, self.labelTest)
+
+    def testEqNotSameDuration(self):
+        self.labelTest.duration = music21.duration.Duration(self.label.duration.quarterLength + 1.0)
+        self.assertNotEqual(self.label, self.labelTest)
+
+
+if __name__ == '__main__':
+    music21.mainTest(Test)
