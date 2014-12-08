@@ -1,6 +1,7 @@
 '''
-Terminal output for an analysis schema (:class:`~music21.stream.Score` containing :class:`~music21.schema.Label`).
+Terminal colored output for an analysis schema (:class:`~music21.stream.Score` containing :class:`~music21.schema.Label`).
 '''
+from music21.schema.colors import Style
 
 import math
 import unittest
@@ -10,8 +11,13 @@ class AnsiLabel(object):
     def __init__(self, label, styleSheet):
         self.label = label
 
-        self._styleBegin = ''
-        self._styleEnd = ''
+        self._style = styleSheet[label.kind] if styleSheet is not None else None
+        if self._style is not None:
+            self._styleBegin = self._style.color.ansi
+            self._styleEnd = Style.RESET_ALL
+        else:
+            self._styleBegin = ''
+            self._styleEnd = ''
 
     def renderOnLine(self, xZoom, line):
         start = int(self.label.offset * xZoom)
