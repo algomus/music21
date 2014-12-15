@@ -836,3 +836,196 @@ class SvgSchemaSet(object):
         with open(filename, 'w') as fd:
             fd.write(self.render(**kwargs))
 
+# -----------------------------------------------------------------------------
+
+import unittest
+
+
+# from music21.schema import Label
+class TestSvgWriter(unittest.TestCase):
+
+    def testShouldRenderAnEmptyGElement(self):
+        svgWriter = SvgWriter()
+        self.assertEqual(svgWriter.render(), '<g />')
+
+    def testShouldRenderAnEmptyElement(self):
+        svgWriter = SvgWriter("element")
+        self.assertEqual(svgWriter.render(), '<element />')
+
+    def testShouldRenderAnElementWithContent(self):
+        svgWriter = SvgWriter("element", {}, "content")
+        self.assertEqual(svgWriter.render(), '<element >content</element>')
+
+    def testShouldRenderAnElementWithContentAndAttribute(self):
+        svgWriter = SvgWriter("element", {"attribute": "value"}, "content")
+        self.assertEqual(svgWriter.render(), '<element attribute="value">content</element>')
+
+    def testInitialOrderOfAttributesShoudNotBeSignificant(self):
+        svgWriter1 = SvgWriter("element", {"attribute1": "value1", "attribute2": "value2"}, "content")
+        svgWriter2 = SvgWriter("element", {"attribute2": "value2", "attribute1": "value1"}, "content")
+        self.assertEqual(svgWriter1.render(), svgWriter2.render())
+
+    def testShouldRenderOneElementWithOneChild(self):
+        parent = SvgWriter("parent")
+        child = SvgWriter("child")
+        parent.add(child)
+        self.assertEqual(parent.render(), '<parent ><child /></parent>')
+
+    def testShouldRenderOneElementWithContentAndOneChild(self):
+        parent = SvgWriter("parent", content="content")
+        child = SvgWriter("child")
+        parent.add(child)
+        self.assertEqual(parent.render(), '<parent >content<child /></parent>')
+
+    def testChildAsAContentHasTheSameRenderedAsASimpleChild(self):
+        child = SvgWriter("child")
+        parent1 = SvgWriter("parent", content=child)
+        parent2 = SvgWriter("parent")
+        parent2.add(child)
+        self.assertEqual(parent1.render(), parent2.render())
+
+    def testContentShouldBeFirst(self):
+        child1 = SvgWriter("child1")
+        child2 = SvgWriter("child2")
+        parent1 = SvgWriter("parent", content=child1)
+        parent1.add(child2)
+        parent2 = SvgWriter("parent")
+        parent2.add(child1, 1)
+        parent2.add(child2, 2)
+        self.assertEqual(parent1.render(), parent2.render().replace('\n', ''))
+
+
+class TestSvgSchema(unittest.TestCase):
+
+    def test(self):
+        score = music21.stream.Score()
+        score.id = "myscore"
+        part = music21.stream.Part()
+        score.insert(0, part)
+        schema = SvgSchema(score, music21.schema.style.StyleSheet())
+        self.assertRegexpMatches(schema.render().render(),
+                                 '<g class="schema" id="myscore" transform="translate.*">' +
+                                     '<g >' +
+                                         '<rect fill="#f0f0f0" height="55" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
+                                         '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="30">' +
+                                             'myscore' +
+                                         '</text>' +
+                                     '</g>' +
+                                 '</g>')
+
+
+class TestSvgSchemaSet(unittest.TestCase):
+
+    def testSetShouldBeEmpty(self):
+        schemaSet = SvgSchemaSet("myschemaset")
+        self.assertEqual(schemaSet.render(),
+                         '<svg height="20" width="0" xmlns="http://www.w3.org/2000/svg">' +
+                             '<g >' +
+                                 '<text font-size="16" font-style="italic" x="10" y="20">myschemaset</text>' +
+                             '</g>' +
+                         '</svg>')
+
+    def testSetShouldContainOneSchema(self):
+        score = music21.stream.Score()
+        score.id = "myscore"
+        part = music21.stream.Part()
+        score.insert(0, part)
+        schemaSet = SvgSchemaSet("myschemaset")
+        schemaSet.addSchema(score, music21.schema.style.StyleSheet())
+        self.assertRegexpMatches(schemaSet.render(),
+                                 '<svg height="85" width="1040" xmlns="http://www.w3.org/2000/svg">' +
+                                     '<g >' +
+                                    '<text font-size="16" font-style="italic" x="10" y="20">myschemaset</text>\n' +
+                                         '<g class="schema" id="myscore" transform="translate.*">' +
+                                             '<g >' +
+                                                 '<rect fill="#f0f0f0" height="55" stroke="#cccccc" width="1040" x="0" y="30"/>\n' +
+                                                 '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="60">myscore</text>' +
+                                             '</g>'+
+                                         '</g>'+
+                                     '</g>'+
+                                 '</svg>')
+
+
+class Test(unittest.TestCase):
+
+    class Part(object):
+        def __init__(self, idVal, kind):
+            self.id = idVal
+            self.kind = kind
+
+    def setUp(self):
+        self.style = music21.schema.style.StyleSheet()
+        self.label = music21.schema.Label(offset=3, duration=17, kind='toto')
+        self.box = Box(self.label, self.style)
+        svgWriter = SvgWriter()
+        self.box.render(svgWriter, xZoom=1, y=0)
+        self.svgBox = svgWriter.children[0][1]
+        part = self.Part("id", "kind")
+        self.style.addStyle('kind', {'lineAllowOverlaps': False})
+        self.line = SvgLine(part, self.style)
+
+    def __testSvgBoxShouldContainElement(self, element):
+        for child in self.svgBox.children:
+            if child[1].element == element:
+                self.assertTrue(child[1].element == element)
+                return
+        self.assertTrue(1 == 2)
+
+    def testBoxShouldContainRect(self):
+        self.__testSvgBoxShouldContainElement('rect')
+
+    def testBoxShouldContainText(self):
+        self.__testSvgBoxShouldContainElement('text')
+
+    def __getBoxElement(self, element):
+        for child in self.svgBox.children:
+            if child[1].element == element:
+                return child[1]
+        return None
+
+    def testBoxTextShouldBeToto(self):
+        self.assertEqual(self.__getBoxElement('text').content, 'toto')
+
+    def testBoxRectYShouldBeZero(self):
+        self.assertEqual(self.__getBoxElement('rect').attributes["y"], 0)
+
+    def testBoxRectXShouldBeOffsetPlusMargin(self):  # xZoom=1
+        self.assertEqual(self.__getBoxElement('rect').attributes["x"], self.label.offset + SvgSchema.LINE_NAME_WIDTH)
+
+    def testSameBoxesShouldNotOverlappedEachOther(self):
+        self.line.addLabel(self.box)
+        self.line.addLabel(self.box)
+        svgWriter = SvgWriter()
+        self.line.render(svgWriter, 1, 0)
+        svgBox1 = svgWriter.children[0][1]
+        y1 = svgBox1.children[0][1].attributes["y"]
+        h1 = svgBox1.children[0][1].attributes["height"]
+        textY1 = svgBox1.children[1][1].attributes["y"]
+        svgBox2 = svgWriter.children[1][1]
+        y2 = svgBox2.children[0][1].attributes["y"]
+        texty2 = svgBox2.children[1][1].attributes["y"]
+        self.assertEqual(y1 + h1, y2)
+        self.assertEqual(textY1 + h1, texty2)
+
+    def testSameBoxesShoudKeepSameSize(self):
+        self.line.addLabel(self.box)
+        self.line.addLabel(self.box)
+        svgWriter = SvgWriter()
+        self.line.render(svgWriter, 1, 0)
+        svgBox1 = svgWriter.children[0][1]
+        x1 = svgBox1.children[0][1].attributes["x"]
+        h1 = svgBox1.children[0][1].attributes["height"]
+        w1 = svgBox1.children[0][1].attributes["width"]
+        svgBox2 = svgWriter.children[1][1]
+        x2 = svgBox2.children[0][1].attributes["x"]
+        h2 = svgBox2.children[0][1].attributes["height"]
+        w2 = svgBox2.children[0][1].attributes["width"]
+        self.assertListEqual([x1, h1, w1], [x2, h2, w2])
+
+# -----------------------------------------------------------------------------
+_DOC_ORDER = [SvgSchemaSet, SvgSchema, Graduations, FlexibleGraduations, SvgLabel, Box, GlobalBox, VerticalLine, Triangle]
+
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    music21.mainTest(Test, TestSvgWriter, TestSvgSchema, TestSvgSchemaSet)
