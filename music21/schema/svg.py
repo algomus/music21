@@ -399,6 +399,115 @@ class Triangle(SvgLabel):
 
 
 
+##############################################
+#    Bar numbers / Graduations
+
+
+class Graduations(object):
+
+    MAX_GRADUATIONS = 24
+
+    '''
+    Graduations for bar numbers at regular intervals,
+    assuming a fixed meter of 'ratioString'.
+    '''
+
+    def __init__(self, highestOffset, ratioString, styleSheet):
+        self.highestOffset = highestOffset
+        self._style = styleSheet['grad']
+        self.displayFrequency = None
+        self.ratioString = ratioString
+
+    def computeDisplayFrequency(self, numberMeasures):
+
+        self.displayFrequency = float(numberMeasures) / float(Graduations.MAX_GRADUATIONS)
+
+        # Round to nearest power of 2
+        if self.displayFrequency > 0:
+            self.displayFrequency = math.pow(2, int(math.log(self.displayFrequency, 2)))
+
+    def render(self, svgWriter, xZoom, y, oHeight=0):
+
+        try:
+            mtab = self.ratioString.split("/")
+            measureLength = int(mtab[0]) * 4 / int(mtab[1])
+        except:
+            measureLength = 4
+
+        self.computeDisplayFrequency(self.highestOffset / measureLength)
+
+        offset = 0  # self.label.offset
+        endOffset = self.highestOffset  # offset + self.label.duration.quarterLength
+        i = 0
+
+        while offset < endOffset:
+            self.renderOneBarLine(svgWriter, i, offset, xZoom, y, oHeight)
+            offset += measureLength
+            i += 1
+
+    def renderOneBarLine(self, svgWriter, i, offset, xZoom, y, oHeight=0):
+        if i == 0:
+            return
+
+        ret = SvgWriter()
+
+        x = SvgSchema.LINE_NAME_WIDTH + offset * xZoom
+
+        if (i - 1) % self.displayFrequency == 0:
+            ret += SvgWriter('line',
+                             {
+                                 'x1': x,
+                                 'x2': x,
+                                 'y1': y,
+                                 'y2': y + oHeight,
+                                 'style': "stroke:%s;stroke-width:2" % self._style.colorAfterOpacity.hex,
+                             })
+
+            if (i - 1) % (2 * self.displayFrequency) == 0:
+                ret += SvgWriter('text',
+                                 {
+                                     'x': x,
+                                     'y': y - 8,
+                                     'font-size': self._style.fontSize,
+                                     'font-family': self._style.fontFamily,
+                                     'text-anchor': 'middle',
+                                     'style': "fill:%s" % self._style.colorAfterOpacity.hex,
+                                 },
+                                 content=str(i))
+
+        svgWriter.add(ret, 0)
+
+
+class FlexibleGraduations(Graduations):
+
+    '''
+    Graduations for bar numbers following a `measureStream'
+    Handle meter changes throughout the piece
+    '''
+
+    def __init__(self, measureStream, styleSheet):
+        #  Graduations.__init__(self, None, None)  # TODO : appeler Graduations.__init__ ?
+        self.measureStream = measureStream
+        self._style = styleSheet['grad']
+
+    def render(self, svgWriter, xZoom, y, oHeight=0):
+        i = 0
+        measures = self.measureStream.getElementsByClass('Measure')
+
+        self.computeDisplayFrequency(len(measures))
+
+        # Is the first measure a complete one ?
+        # TODO: check that we always have the good measure number, including cases with upbeats
+        #  m.measureNumberWithSuffix() ? -> marche pas sur .lypy (peut-etre score pas assez prepare)
+        # if i == 0 and m.duration.quarterLength == m.barDuration: -> KO
+        if len(measures) >= 2 and measures[1].offset - measures[0].offset == measures[0].barDuration.quarterLength:
+            i += 1
+
+        for m in self.measureStream.getElementsByClass('Measure'):
+            self.renderOneBarLine(svgWriter, i, m.offset, xZoom, y, oHeight)
+            i += 1
+
+
 
 
 ##############################################
@@ -485,7 +594,7 @@ class SvgSchema(object):
     DIAG_RIGHT_MARGIN = 0
     LINE_HALF_SPACING = 4  # Half spacing between Lines. Top : one half, Middle : two halves, Bottom : one half
     HEIGHT_WHEN_EMPTY = 20
-    TOP_PADDING = 3
+    TOP_PADDING = 23  # addGraduation
     BOTTOM_PADDING = 3
     BAR_LINES_COLOR = Color(0, 0, 0)
     BAR_NUMBERS_COLOR = Color(0, 0, 0)
@@ -493,7 +602,7 @@ class SvgSchema(object):
     NAME_POS_X = 10
     NAME_FONT_SIZE = 12
 
-    def __init__(self, score, styleSheet):
+    def __init__(self, score, styleSheet, measureStream=None):
         self.name = score.metadata.title if score.metadata else score.id  # schema.name
         self._lines = []
 
@@ -508,6 +617,19 @@ class SvgSchema(object):
         self._scoreLabels = []
 
         self._xZoom = None
+
+
+        if measureStream is not None:
+            self.measureStream = measureStream
+        else:
+            # Try to discover a stream with measures
+            if len(score.getElementsByClass('Measure')):
+                self.measureStream = score
+            elif len(score.parts) and len(score.parts[0].getElementsByClass('Measure')):
+                self.measureStream = score.parts[0]
+            else:
+                self.measureStream = None
+
 
         for part in score.parts:
             svgLineIsEmpty = True
@@ -583,6 +705,14 @@ class SvgSchema(object):
             label.render(svgWriter, self._xZoom, yGrid, oHeight)
             heightBottom = max(heightBottom, label.heightBottom)
 
+        # Graduations for bar numbers
+        if self.measureStream:
+            graduations = FlexibleGraduations(self.measureStream, self._styleSheet)
+            # graduations.data = measureStream #FIXME : utilite de graduations.data ?
+        else:
+            graduations = Graduations(self.highestOffset, self._firstRatioString, self._styleSheet)
+        graduations.render(svgWriter, self._xZoom, yGrid, oHeight)
+
         for line in self._lines:
             line.render(svgWriter, self._xZoom, y)
 
@@ -637,6 +767,11 @@ class SvgSchema(object):
             fd.write(root.render())
 
 
+def _getFirstRatioString(score):
+    for meter in score.parts[0].flat.getElementsByClass('TimeSignature'):
+        return meter.ratioString
+    return None
+
 
 # #### several Schemas
 
@@ -659,7 +794,7 @@ class SvgSchemaSet(object):
         svgschema = SvgSchema(schema, style)
         self._schemas.append(svgschema)
 
-    def render(self, fixedHeight=None, measureStream=None):
+    def render(self, fixedHeight=None):
 
         highestOffset = 0
         for s in self._schemas:
@@ -687,7 +822,7 @@ class SvgSchemaSet(object):
 
         for schema in self._schemas:
             width = schema.width
-            ret += schema.render(height, measureStream)
+            ret += schema.render(height)
             height += schema.height + SvgSchemaSet.SPACE_BETWEEN_SCHEMAS
         if fixedHeight is not None:
             height = fixedHeight
