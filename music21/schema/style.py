@@ -29,6 +29,43 @@ from music21.schema import svg
 DEFAULT_STYLE_KIND = 'default'
 
 defaultStyleDict = {
+
+    # Global
+    'colorBackground': Color(240, 240, 240),
+    'exportOpacity': True,       # if False, do not export 'opacity', but rather mixes Colors with the 'colorBackground'
+                                 # (some .svg backends do not like opacities)
+
+
+    # Label
+    'color': Color(128, 128, 128),   # color of the Label
+    'colorOpacity': 1.0,             # opacity on the color of the Label (and not on other things, such as text in a Box)
+    'opacity': 1.0,                  # opacity of the whole Label
+
+    'svg': svg.Box,
+    'zIndex': 10,
+    'fontSize': 12,
+    'fontFamily': 'Helvetica',
+
+    # svg.Box
+    'boxHeight': 18,
+    'boxRoundedCorners': 3,
+    'boxTextXPadding': 5,             # padding inside the box
+    'boxTextColor': Color(0, 0, 0),
+
+    # svg.VerticalLine
+    'verticalLineWidth': 4,
+    'verticalLineRoundedCorners': 3,
+
+    # svg.Triangle
+    'trianglePosition': 'bottom',    # top, bottom, inLine
+    'triangleDirection': 'up',       # up, down
+    'triangleYPadding': 2,           # additional padding between top/bottom of the diagram and the triangle
+    'triangleScale': 1.0,
+
+
+    # SvgLine
+    'lineAllowOverlaps': True,       # if False, overlaping Boxes will be shifted in svg output
+    'lineDisplayName': False,
 }
 
 
