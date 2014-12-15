@@ -133,10 +133,46 @@ class Style(object):
     def __nonzero__(self):
         return len(self._dict) > 0
 
-    def __getattr__(self, attribute):                
-        attr = None
+    def __getattr__(self, attribute, recursive=True):
+        '''
+        >>> from music21.schema import style
+        >>> mystyle = style.Style(style.DEFAULT_STYLE_KIND, {'exportOpacity': False, 'foo': 1})
+        >>> print(mystyle)
+        /default
+        >>> mystyle.exportOpacity
+        False
+        >>> mystyle.foo
+        1
+        >>> mystyle.bar
+        Traceback (most recent call last):
+        ...
+        AttributeError: 'bar' not defined in /default
+        >>> myotherstyle = style.Style('other', {'exportOpacity': True, 'bar': 2}, mystyle)
+        >>> print(myotherstyle)
+        /default/other
+        >>> myotherstyle.exportOpacity
+        True
+        >>> myotherstyle.foo
+        1
+        >>> myotherstyle.bar
+        2
 
-        if attribute in self._dict:
+        '''
+        attr = None
+        if attribute == 'opacity' and recursive:
+            if self.exportOpacity:
+                attr = self.__getattr__('opacity', False)
+            else:
+                attr = 1.0
+
+        elif attribute == 'colorAfterOpacity':
+            mix = self.color.mix(self.colorOpacity, self.colorBackground)
+            if self.exportOpacity:
+                attr = mix
+            else:
+                attr = mix.mix(self.__getattr__('opacity', False), self.colorBackground)
+
+        elif attribute in self._dict:
             attr = self._dict[attribute]
 
         elif self.parentKind:
