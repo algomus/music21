@@ -5487,6 +5487,7 @@ class Stream(base.Music21Object):
         fillGaps=False,
         timeRangeFromBarDuration=False,
         inPlace=True,
+        splitDurationComponents=False
         ):
         '''
         Calls :py:func:`~music21.stream.makeNotation.makeRests`.
@@ -5497,6 +5498,7 @@ class Stream(base.Music21Object):
             fillGaps=fillGaps,
             timeRangeFromBarDuration=timeRangeFromBarDuration,
             inPlace=inPlace,
+            splitDurationComponents=splitDurationComponents
             )
 
     def makeTies(self,
