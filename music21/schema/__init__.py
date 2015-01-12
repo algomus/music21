@@ -256,10 +256,109 @@ class Label(Music21Object):
 
         return overlappingLabels
 
+    def extractPattern(self, container=None):
+        r'''
+
+        Calls :meth:`~music21.stream.Stream.getElementsByOffset()` and reconstruct measures, clef, key, time signature information.
+
+        >>> from music21.schema import Label
+        >>> from music21 import corpus
+        >>> score = corpus.parse('bach/bwv66.6')
+        >>> p = score.parts[0]
+        >>> p.show('text')  #doctest: +ELLIPSIS
+        {0.0} <music21.instrument.Instrument P1: Soprano: Instrument 1>
+        {0.0} <music21.stream.Measure 0 offset=0.0>
+            {0.0} <music21.clef.TrebleClef>
+            {0.0} <music21.key.KeySignature of 3 sharps, mode minor>
+            {0.0} <music21.meter.TimeSignature 4/4>
+            {0.0} <music21.note.Note C#>
+            {0.5} <music21.note.Note B>
+        {1.0} <music21.stream.Measure 1 offset=1.0>
+        ...
+        {9.0} <music21.stream.Measure 3 offset=9.0>
+            {0.0} <music21.layout.SystemLayout>
+            {0.0} <music21.note.Note A>
+            {0.5} <music21.note.Note B>
+            {1.0} <music21.note.Note G#>
+            {2.0} <music21.note.Note F#>
+            {3.0} <music21.note.Note A>
+        {13.0} <music21.stream.Measure 4 offset=13.0>
+            {0.0} <music21.note.Note B>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note F#>
+            {3.0} <music21.note.Note E>
+        {17.0} <music21.stream.Measure 5 offset=17.0>
+            {0.0} <music21.note.Note A>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note C#>
+            {3.0} <music21.note.Note C#>
+        {21.0} <music21.stream.Measure 6 offset=21.0>
+            {0.0} <music21.layout.SystemLayout>
+            {0.0} <music21.note.Note A>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note C#>
+            {3.0} <music21.note.Note A>
+        ...
+        >>> label = Label(offset=11, duration=8)
+        >>> label.activeSite = p
+        >>> extract = label.extractPattern()
+        >>> extract.show('text')
+        {0.0} <music21.clef.TrebleClef>
+        {0.0} <music21.key.KeySignature of 3 sharps, mode minor>
+        {0.0} <music21.meter.TimeSignature 4/4>
+        {9.0} <music21.stream.Measure 3 offset=9.0>
+            {0.0} <music21.note.Rest rest>
+            {2.0} <music21.note.Note F#>
+            {3.0} <music21.note.Note A>
+        {13.0} <music21.stream.Measure 4 offset=13.0>
+            {0.0} <music21.note.Note B>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note F#>
+            {3.0} <music21.note.Note E>
+        {17.0} <music21.stream.Measure 5 offset=17.0>
+            {0.0} <music21.note.Note A>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note C#>
+        '''
+
+        if container is None:
+            container = self.activeSite
+
+        if container is None:
+            return Stream()
+        else:
+            extract = container.getElementsByOffset(self.offset, self.end, mustBeginInSpan=False)
+            extract = copy.deepcopy(extract)
+            for label in extract.getElementsByClass('Label'):
+                extract.remove(label)
+            measures = extract.getElementsByClass('Measure')
+            if not measures:
+                # print "! Container without Measures"
+                # extract.show('txt')
+                return Stream()
+
+            # Removing extra elements in first and last measure
+            for measure in measures:
+                for elem in measure:
+                    if (
+                            measure.offset + elem.offset + elem.duration.quarterLength <= self.offset or
+                            measure.offset + elem.offset > self.end
+                    ):
+                        measure.remove(elem)
+
+            measures[0].makeRests(splitDurationComponents=True)
+
+            #  Adds clef / key / time signature information
+            for obj in ['Clef', 'Key', 'TimeSignature', 'KeySignature']:
+                # lastObj = container.flat.getElementAtOrBefore(self.offset, obj)  # FIXME: ne renvoie rien, pourquoi ?
+                lastObj = container.flat.getElementsByClass(obj)
+                if lastObj:
+                    extract.insert(0, lastObj[0])
+                    # ou bien # measures[0].insert(0, lastObj[0])
+            return extract
 
     def __repr__(self):
         return "<music21.schema.Label %s %s %s offset=%s duration=%s>" % (self.kind, self.tag, self.weight, self.offset, self.duration.quarterLength)
-
 
 # -----------------------------------------------------------------------------
 
@@ -311,6 +410,13 @@ class Test(unittest.TestCase):
         labelC = Label(offset=7, duration=2)
         self.assertEqual(labelA.overlapQuarterLength(labelB), 3.0)
         self.assertEqual(labelA.overlapQuarterLength(labelC), 0.0)
+
+    def testExtractPattern(self):
+        labelA = Label(offset=3, duration=6)
+        labelA.activeSite = self.vs
+
+        pattern = labelA.extractPattern()
+        self.assertEqual(len(pattern.flat.getElementsByClass(GeneralNote)), 8)
 
     def testEq(self):
         self.assertEqual(self.label, self.labelTest)
