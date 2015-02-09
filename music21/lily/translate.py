@@ -114,6 +114,7 @@ class LilypondConverter(object):
      '''.lstrip()
     bookHeader = r'''
     \include "lilypond-book-preamble.ly"
+    \include "frameEngraver-box.ly"
     '''.lstrip()
 
     accidentalConvert = {"double-sharp": u"isis",
