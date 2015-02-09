@@ -1063,6 +1063,29 @@ class LilypondConverter(object):
             lyObject = lyo.LyEmbeddedScm(r'\pageBreak')
             currentMusicList.append(lyObject)
             lyObject.setParent(contextObject)
+        elif "BoxStart" in c:
+            s = ''
+            s += r'  \once \override Frame.color = ' + thisObject.color + '\n'
+            s += r'  \once \override FrameBracket.text  = \markup "%s" ' % thisObject.text + '\n'
+            s += r'  \boxStart '  + '\n'
+            lyObject = lyo.LyEmbeddedScm(s)
+            currentMusicList.append(lyObject)
+            lyObject.setParent(contextObject)
+        elif "BoxEnd" in c:
+            lyObject = lyo.LyEmbeddedScm(r'\boxEnd '  + '\n')
+            currentMusicList.append(lyObject)
+            lyObject.setParent(contextObject)
+        elif "Mark" in c:
+            s = ''
+            s += r"  \once \override Score.RehearsalMark.color = " + thisObject.color + '\n'
+            s += r"  \once \override Score.RehearsalMark.self-alignment-X = #LEFT "
+            s += r'  \mark \markup {'
+            s += r" \small \override #'(baseline-skip . 2.5)  \center-column { "
+            s += ' '.join(' "%s" ' % s for s in thisObject.text.split('\n'))
+            s += '}}'
+            lyObject = lyo.LyEmbeddedScm(s)
+            currentMusicList.append(lyObject)
+            lyObject.setParent(contextObject)
         else:
             lyObject = None
 
