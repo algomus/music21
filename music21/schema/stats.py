@@ -4,6 +4,7 @@
 # Purpose:      Compare analysis schemas
 #
 # Authors:      Guillaume Bagan
+#               Nicolas Guiomard-Kagan
 #               Mathieu Giraud
 #               Richard Groult
 #               Emmanuel Leguy
@@ -427,6 +428,107 @@ class SchemaDiff(object):
         return self.getStatsByKind()
 # ------------------------------------------------------------------------------
 
+
+class MutualInformationSchema(object):
+
+    def __init__(self, schema1, schema2, affectation=(lambda label: label.tag), **kwargs):
+
+        '''
+        Compute entropy scores as defined by (Lukashevich, ISMIR 2008)
+
+        Labels are compared through Label.compare(**kwargs) -- by default, only start and end are checked
+        The affectation of Labels is the 'tag' of each label, but it can be changed by passing another function.
+
+        so: over-segmentation score ==> information provided by schema1, knowing schema2
+        su: under-segmentation score ==> information provided by schema2, knowing schema1
+        '''
+
+        nbLabels = defaultdict(int)  # nbLabels([i,j]) : number of Labels being simultaneously in the part 'i' of 'schema1' and in the part 'j' of 'schema2'
+        nbLabels1 = defaultdict(int)  # nbLabels1[i]    : number of Labels in the part 'i' of 'schema1'
+        nbLabels2 = defaultdict(int)  # nbLabels2[j]    : number of Labels in the part 'j' of 'schema2'
+        parts1 = []
+        parts2 = []
+        nbAllLabels = 0
+
+        # Iterate over all labels and build counts of Labels
+        # This could be more efficient, by sorting first all the labels
+
+        for part1 in schema1:
+            for label1 in part1.getElementsByClass('Label'):
+                found = False
+                for part2 in schema2:
+                    for label2 in part2.getElementsByClass('Label'):
+                        if label1.compare(label2, **kwargs):
+                            nbLabels[(affectation(label1), affectation(label2))] += 1
+                            nbLabels1[affectation(label1)] += 1
+                            nbLabels2[affectation(label2)] += 1
+                            nbAllLabels += 1
+
+                            if affectation(label1) not in parts1:
+                                parts1.append(affectation(label1))
+                            if affectation(label2) not in parts2:
+                                parts2.append(affectation(label2))
+
+                            found = True
+                            break
+                if not found:
+                    environLocal.warn('! Label %s has no equivalent in the other schema' % label1, 'stats.py: MutualInformationSchema: __init__')
+
+        self.nbLabels = nbLabels
+
+        # Compute distributions
+        pA = {}
+        pE = {}
+        pAE = {}
+        pEA = {}
+
+        for i in parts1:
+            for j in parts2:
+                pAE[(i, j)] = float(nbLabels[(i, j)]) / nbLabels2[j]
+                pEA[(j, i)] = float(nbLabels[(i, j)]) / nbLabels1[i]
+
+        for i in parts1:
+            pA[i] = float(nbLabels1[i]) / nbAllLabels
+        for j in parts2:
+            pE[j] = float(nbLabels2[j]) / nbAllLabels
+
+        # Compute conditionnal entropies
+        temp = 0
+        for i in parts1:
+            result = 0
+            for j in parts2:
+                if pEA[(j, i)] > 0:
+                    result += pEA[(j, i)] * math.log(pEA[(j, i)], 2)
+            temp += pA[i] * result
+        self.hEA = -temp
+
+        temp = 0
+        for j in parts2:
+            result = 0
+            for i in parts1:
+                if pAE[(i, j)] > 0:
+                    result += pAE[(i, j)] * math.log(pAE[(i, j)], 2)
+            temp += pE[j] * result
+        self.hAE = -temp
+
+        # Compute scores
+        if len(parts2) > 1:
+            self.so = 1 - (self.hEA / math.log(len(parts2), 2))
+        else:
+            self.so = 1
+
+        if len(parts1) > 1:
+            self.su = 1 - (self.hAE / math.log(len(parts1), 2))
+        else:
+            self.su = 1
+
+    def __str__(self):
+        return 'hEA: %.3f, hAE: %.3f, so: %.3f, su: %.3f' % (self.hEA, self.hAE, self.so, self.su)
+
+
+# ------------------------------------------------------------------------------
+
+
 class TestCount(unittest.TestCase):
     def setUp(self):
         self.c = Counts()
@@ -665,13 +767,70 @@ class TestCompareSchemas(unittest.TestCase):
         self.assertEqual((c.counts[TP], c.counts[FP], c.counts[FN]), (6, 0, 0))
 
 
-# ------------------------------------------------------------------------------
+class TestMutualInformationSchema(unittest.TestCase):
+    def setUp(self):
+        from music21.schema import Label
 
+        self.score1 = music21.stream.Score()
+        p1 = music21.stream.Part()
+        self.score1.append(p1)
+
+        p1.insert(Label(offset=10, kind='a', tag='S'))
+        p1.insert(Label(offset=20, kind='a', tag='S'))
+        p1.insert(Label(offset=30, kind='b', tag='S'))
+        p1.insert(Label(offset=40, kind='b', tag='A'))
+
+        self.score2 = music21.stream.Score()
+        p2 = music21.stream.Part()
+        self.score2.append(p2)
+
+        p2.insert(Label(offset=10, kind='i', tag='W'))
+        p2.insert(Label(offset=20, kind='i', tag='Z'))
+        p2.insert(Label(offset=30, kind='j', tag='W'))
+        p2.insert(Label(offset=40, kind='j', tag='Z'))
+
+    def testOneSchemaAgainstItself(self):
+        muInSh = MutualInformationSchema(self.score1, self.score1)
+
+#         print("test_one_schema_against_itself")
+        print(muInSh, muInSh.nbLabels)
+
+        self.assertEqual((muInSh.so, muInSh.su), (1, 1))
+        self.assertEqual(muInSh.nbLabels[('S', 'S')], 3)
+
+    def testTwoSchemas(self):
+        muInSh_1vs2 = MutualInformationSchema(self.score1, self.score2, checkKind=False)
+        muInSh_2vs1 = MutualInformationSchema(self.score2, self.score1, checkKind=False)
+
+        print("testTwoSchemas : we should get reverse scores when calling 1vs2 / 2vs1")
+        print(muInSh_1vs2, muInSh_1vs2.nbLabels)
+        print(muInSh_2vs1, muInSh_2vs1.nbLabels)
+
+        self.assertEqual((muInSh_1vs2.so, muInSh_1vs2.su), (muInSh_2vs1.su, muInSh_2vs1.so))
+
+        self.assertEqual(muInSh_1vs2.nbLabels[('S', 'W')], 2)
+        self.assertEqual(muInSh_1vs2.nbLabels[('S', 'Z')], 1)
+        self.assertEqual(muInSh_1vs2.nbLabels[('A', 'W')], 0)
+        self.assertEqual(muInSh_1vs2.nbLabels[('A', 'Z')], 1)
+
+    def testTwoSchemasOnKind(self):
+        muInSh = MutualInformationSchema(self.score1, self.score2, (lambda label: label.kind), checkKind=False)
+        print("test twoSchemasOnKind : perfect scores here")
+        print(muInSh, muInSh.nbLabels)
+
+        self.assertEqual((muInSh.so, muInSh.su), (1, 1))
+        self.assertEqual(muInSh.nbLabels[('a', 'i')], 2)
+
+# -----------------------------------------------------------------------------
+_DOC_ORDER = [SchemaDiff, MutualInformationSchema, Counts]
+
+# ------------------------------------------------------------------------------
 if __name__ == '__main__':
     music21.mainTest(
         TestCount,
         TestComparePartsSimple,
         TestCompareParts,
         TestComparePartsAllSameOffset,
-        TestCompareSchemas
+        TestCompareSchemas,
+        TestMutualInformationSchema
     )
