@@ -15,6 +15,10 @@
 '''
 This module provides classes to choose how to render schemas
 (:class:`~music21.stream.Score` containing :class:`~music21.schema.Label`)
+using :class:`~music21.schema.svg.SvgSchema`, :class:`~music21.schema.svg.SvgSchemaSet`,
+:class:`~music21.schema.web.WebSchemaSet`,
+:class:`~music21.schema.lily.LilySchema`, or
+:class:`~music21.schema.ansi.AnsiSchema`.
 '''
 import unittest
 

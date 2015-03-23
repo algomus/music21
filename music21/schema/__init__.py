@@ -19,6 +19,12 @@ that can be made on a score.
 One or several analysis schema (as for example different analyses performed by different sources (musicologists or algorithms),
 or different level of analyses (fine/grain)).
 
+Scores embedding labels can be rendered in svg (:class:`~music21.schema.svg.SvgSchema` and :class:`~music21.schema.svg.SvgSchemaSet`),
+possibly included in a html code with music21j extracts of the score (:class:`~music21.schema.web.WebSchemaSet`),
+or with Lilypond (:class:`~music21.schema.lily.LilySchema`), or in a terminal (colored) output (:class:`~music21.schema.ansi.AnsiSchema`).
+
+Schemas can be compared with (:class:`~music21.schema.stats.SchemaDiff`).
+
 Reference (in French): https://hal.archives-ouvertes.fr/hal-01135118v1
 '''
 
