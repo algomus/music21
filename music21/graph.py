@@ -3370,6 +3370,80 @@ class PlotHorizontalBarWeighted(PlotStream):
         return data, xTicks, yTicks
 
 
+class PlotSchema(PlotHorizontalBarWeighted):
+    '''
+
+    Class to produce a graph from a stream which contains :class:`~music21.schema.Label` elements.
+    Style (color) of each element can be set by a :class:`~music21.schema.style.StyleSheet` object.
+
+    >>> from music21.analysis.discrete import KrumhanslSchmuckler, DiscreteAnalysisException
+    >>> from music21.schema import style, Label
+    >>> from music21.schema.colors import Color, Back
+    >>> from music21.stream import Measure
+    >>> from music21 import corpus
+    >>> from music21.graph import PlotSchema
+    >>> piece = corpus.parse('bwv66.6')
+    >>> processor = KrumhanslSchmuckler()
+    >>> for part in piece.parts:
+    ...    for m in part.getElementsByClass(Measure):
+    ...        try:
+    ...            solution = processor.getSolution(m)
+    ...            t = solution.name
+    ...            k = 'key-major' if 'major' in t else 'key-minor'
+    ...        except DiscreteAnalysisException:
+    ...            t = "?"
+    ...            k = ''
+    ...    keyLabel = Label(offset=m.offset, duration=m.duration, kind=k, tag=t)
+    ...    part.insert(keyLabel)
+    >>> mystyle = style.StyleSheet()
+    >>> mystyle.addStyle('key-major', {'color': Color(0, 255, 0, Back.GREEN)})
+    >>> mystyle.addStyle('key-minor', {'color': Color(255, 200, 0, Back.YELLOW)})
+    >>> #_DOCS_SHOW plot_schema = PlotSchema(piece, style=mystyle, figureSize=[20, 2])
+    >>> #_DOCS_SHOW plot_schema.process()
+
+    '''
+    def __init__(self, streamObj, *args, **keywords):
+        PlotHorizontalBarWeighted.__init__(self, streamObj, *args, **keywords)
+
+        if 'style' in keywords:
+            self.__style = keywords['style']
+
+        self.fxTicks = self.ticksOffset  # this is a method
+
+        self.data, xTicks = self._extractData()
+        self.graph = GraphHorizontalBarWeighted(*args, **keywords)
+        self.graph.setData(self.data)
+
+        # only need to add x ticks; y ticks added from data labels
+        self.graph.setTicks('x', xTicks)
+        self.graph.setAxisLabel('x', 'Measure Number')
+
+        # need more space for pitch axis labels
+        if 'figureSize' not in keywords:
+            self.graph.setFigureSize([10, 4])
+        if 'title' not in keywords:
+            self.graph.setTitle(streamObj.id)
+            if self.streamObj.metadata is not None:
+                if self.streamObj.metadata.title is not None:
+                    self.graph.setTitle(self.streamObj.metadata.title)
+        if 'hideYGrid' not in keywords:
+            self.graph.hideYGrid = True
+
+    def _extractData(self):
+        data = []
+        for part in self.streamObj.parts:
+            graphLabels = []
+            for label in part.getElementsByClass('Label'):
+                if self.__style:
+                    color = self.__style[label.kind].colorAfterOpacity.hex
+                else:
+                    color = "#666666"
+                graphLabels.append([label.offset, label.duration.quarterLength, 1.0, color])
+            data.append((part.id, graphLabels))
+        xTicks = self.fxTicks()
+        return data, xTicks
+
+
 class PlotDolan(PlotHorizontalBarWeighted):
     '''A graph of the activity of a parameter of a part (or a group of parts) over time. The default parameter graphed is Dynamics. Dynamics are assumed to extend activity to the next change in dynamics.
 
