@@ -114,6 +114,10 @@ class LilySchema(object):
 
     def show(self, fmt=None, app=None, **keywords):
         return self.score.show(fmt, app)
+    
+    def write(self, fmt=None, fileName=None, **keywords):
+        return self.score.write(fmt, fileName)
+    
 
 
 # -----------------------------------------------------------------------------
