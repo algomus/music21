@@ -190,11 +190,34 @@ class SchemaDiff(object):
         self.kinds = kinds if kinds else []
         self.kindsIgnore = kindsIgnore if kindsIgnore else []
 
+        self._startDeltaOffset = None
+        self._endDeltaOffset = None
+
         # Initialize scores for storing the diffs
         self.diff = {}
         for key in [TP, FP, FN]:
             self.diff[key] = music21.stream.Score()
             self.diff[key].id = '%s-%s' % (basename, key)
+
+    @property
+    def startDeltaOffset(self):
+        return self._startDeltaOffset
+
+    @startDeltaOffset.setter
+    def startDeltaOffset(self, value):
+        if self._startDeltaOffset is not None and self._startDeltaOffset != value:
+            environLocal.warn("startDeltaOffset(value=%s): startDeltaOffset is already set with other value %d" % (value, self._startDeltaOffset))
+        self._startDeltaOffset = value
+
+    @property
+    def endDeltaOffset(self):
+        return self._endDeltaOffset
+
+    @endDeltaOffset.setter
+    def endDeltaOffset(self, value):
+        if self._endDeltaOffset is not None and self._endDeltaOffset != value:
+            environLocal.warn("endDeltaOffset(value=%s): endDeltaOffset is already set with other value %d" % (value, self._endDeltaOffset))
+        self._endDeltaOffset = value
 
     def compareParts(
             self,
@@ -339,6 +362,9 @@ class SchemaDiff(object):
             {30.0} <music21.schema.Label a tag2_2 None offset=30.0 duration=1.0>
          '''
 
+        self.startDeltaOffset = startDeltaOffset
+        self.endDeltaOffset = endDeltaOffset
+
         # Compare part by part
         for part1 in schema1.parts:
 
@@ -411,13 +437,14 @@ class SchemaDiff(object):
         >>> shemDif = music21.schema.stats.SchemaDiff('Compare')
         >>> dictRes = shemDif.compareSchemas(s0, s1)
         >>> print(shemDif.getStatsByKind())
+          startDeltaOffset=0 - endDeltaOffset=0
             a        ==> TP:   1   FP:   0   FN:   1  sens:  1/  2   50.0%  prec:  1/  1  100.0%  F1: 0.667
             b        ==> TP:   0   FP:   1   FN:   0  prec:  0/  1    0.0%
             :::::::: ==> TP:   1   FP:   1   FN:   1  sens:  1/  2   50.0%  prec:  1/  2   50.0%  F1: 0.500
         <BLANKLINE>
         '''
 
-        s = ''
+        s = " %s startDeltaOffset=%s - endDeltaOffset=%s\n" % (tag, self.startDeltaOffset, self.endDeltaOffset)
         for kind in self.kinds + [None]:
             counts = self.getCountsOfKind(kind)
             s += " %s   %-8s ==> %s\n" % (tag, kind if kind else '::::::::', counts)
@@ -616,7 +643,7 @@ class TestCompareParts(unittest.TestCase):
         schemadiff = music21.schema.stats.SchemaDiff('test_str')
         schemadiff.diff[TP] = self.a0
         schemadiff.diff[FP] = self.a1
-        out = '''\
+        out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
     :::::::: ==> TP:   5   FP:   4   FN:   0  sens:  5/  5  100.0%  prec:  5/  9   55.6%  F1: 0.714
 '''
         self.assertEqual(str(schemadiff), out)
