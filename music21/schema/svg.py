@@ -766,13 +766,19 @@ class SvgSchema(object):
 
     def save(self, filename):
         environLocal.printDebug(["SvgSchema", filename])
+
+        rendered = self.render() # may update self.height with heightBottom elements
+        # TODO (Mathieu): annuler ce commit, et définir plutôt .heightBottom au moment du __init__
+
         root = SvgWriter('svg',
                          {
                              'xmlns': "http://www.w3.org/2000/svg",
                              'height': self.height,
                              'width': self.width,
                          })
-        root += self.render()
+
+        root += rendered
+
         with open(filename, 'w') as fd:
             fd.write(root.render())
 
