@@ -369,6 +369,30 @@ class Label(Music21Object):
 
 # -----------------------------------------------------------------------------
 
+class Segmentation(music21.stream.Part):
+
+    '''A Segmentation is a succession of consecutive Labels.'''
+
+    def __init__(self, data, constantDuration=None, secondElementIsDuration=False):
+        music21.stream.Part.__init__(self)
+
+        if constantDuration:
+            self.loadPairs([(t, constantDuration) for t in data], secondElementIsDuration=True)
+        else:
+            self.loadPairs(data, secondElementIsDuration=secondElementIsDuration)
+
+    def loadPairs(self, pairs, secondElementIsDuration):
+        current_offset = 0
+        for (tag, secondElement) in pairs:
+            dur = secondElement if secondElementIsDuration else secondElement - current_offset
+            label = Label(offset=current_offset, duration=dur, kind="segment-%s" % tag, tag=tag)
+            self.insert(label)
+            current_offset += dur
+
+
+
+# -----------------------------------------------------------------------------
+
 class Test(unittest.TestCase):
 
     def setUp(self):
