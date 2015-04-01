@@ -613,7 +613,7 @@ class SvgSchema(object):
         self._labels = []
         self._firstRatioString = _getFirstRatioString(score)
         self._styleSheet = styleSheet
-        self._style = styleSheet['']
+        self._style = styleSheet[None]
         self._scoreLabels = []
 
         self._xZoom = None

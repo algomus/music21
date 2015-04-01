@@ -129,7 +129,8 @@ class StyleSheet(object):
         if kind in self._styles:
             return self._styles[kind]
         else:
-            environLocal.warn("! Unknown style kind '%s', back to default" % kind, "style.py: StyleSheet: __getitem__")
+            if kind is not None:
+                environLocal.warn("! Unknown style kind '%s', back to default" % kind, "style.py: StyleSheet: __getitem__")
             return self._styles[DEFAULT_STYLE_KIND]
 
 
