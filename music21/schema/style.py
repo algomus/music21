@@ -207,6 +207,10 @@ class Style(object):
         2
 
         '''
+
+        if attribute in self.__dict__:
+            return self.__dict__[attribute]
+
         attr = None
         if attribute == 'opacity' and recursive:
             if self.exportOpacity:
