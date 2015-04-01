@@ -414,7 +414,7 @@ class Graduations(object):
 
     def __init__(self, highestOffset, ratioString, styleSheet):
         self.highestOffset = highestOffset
-        self._style = styleSheet['grad']
+        self._style = styleSheet[None]
         self.displayFrequency = None
         self.ratioString = ratioString
 
@@ -488,7 +488,7 @@ class FlexibleGraduations(Graduations):
     def __init__(self, measureStream, styleSheet):
         #  Graduations.__init__(self, None, None)  # TODO : appeler Graduations.__init__ ?
         self.measureStream = measureStream
-        self._style = styleSheet['grad']
+        self._style = styleSheet[None]
 
     def render(self, svgWriter, xZoom, y, oHeight=0):
         i = 0
