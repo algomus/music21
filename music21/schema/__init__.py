@@ -331,6 +331,9 @@ class Label(Music21Object):
         if container is None:
             container = self.activeSite
 
+        if container.__class__.__name__ == 'Segmentation':
+            container = None
+
         if container is None:
             return Stream()
         else:
