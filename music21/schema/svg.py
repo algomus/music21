@@ -148,13 +148,13 @@ class SvgLabel(object):
         return self._number
 
     def start(self, xZoom):
-        return SvgSchema.LINE_NAME_WIDTH + self.label.offset * xZoom
+        return self._style.lineNameWidth + self.label.offset * xZoom
 
     def middle(self, xZoom):
-        return SvgSchema.LINE_NAME_WIDTH + (self.label.offset + self.label.duration.quarterLength / 2) * xZoom
+        return self._style.lineNameWidth + (self.label.offset + self.label.duration.quarterLength / 2) * xZoom
 
     def end(self, xZoom):
-        return SvgSchema.LINE_NAME_WIDTH + (self.label.offset + self.label.duration.quarterLength) * xZoom
+        return self._style.lineNameWidth + (self.label.offset + self.label.duration.quarterLength) * xZoom
 
     def width(self, xZoom):
         return self.label.duration.quarterLength * xZoom
@@ -460,7 +460,7 @@ class Graduations(object):
 
         ret = SvgWriter()
 
-        x = SvgSchema.LINE_NAME_WIDTH + offset * xZoom
+        x = self._style.lineNameWidth + offset * xZoom
 
         if (i - 1) % self.displayFrequency == 0:
             ret += SvgWriter('line',
@@ -575,7 +575,7 @@ class SvgLine(object):
         if self._style.lineDisplayName:
             code = SvgWriter("text",
                              {
-                                 'x': SvgSchema.LINE_NAME_WIDTH - 10,
+                                 'x': self._style.lineNameWidth - 10,
                                  'y': lineY + self.height / 2,
                                  'font-size': 10,
                                  'font-family': self._style.fontFamily,
@@ -599,7 +599,6 @@ class SvgSchema(object):
 
     # TODO: We should move these constants to properties to the stylesheet.
     WIDTH = 1000
-    LINE_NAME_WIDTH = 40  # 80 si on met les noms
     DIAG_RIGHT_MARGIN = 0
     LINE_HALF_SPACING = 4  # Half spacing between Lines. Top : one half, Middle : two halves, Bottom : one half
     HEIGHT_WHEN_EMPTY = 20
@@ -678,7 +677,7 @@ class SvgSchema(object):
 
     @property
     def width(self):
-        return self.LINE_NAME_WIDTH + self.WIDTH + self.DIAG_RIGHT_MARGIN
+        return self._style.lineNameWidth + self.WIDTH + self.DIAG_RIGHT_MARGIN
 
     @property
     def scoreLabels(self):

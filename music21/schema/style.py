@@ -69,6 +69,7 @@ defaultStyleDict = {
     # SvgLine
     'lineAllowOverlaps': True,       # if False, overlaping Boxes will be shifted in svg output
     'lineDisplayName': False,
+    'lineNameWidth': 40,
 
     # Graduations
     'graduationKey': 'bar-number',   # bar-number, offset
