@@ -176,6 +176,12 @@ class Style(object):
     def __nonzero__(self):
         return len(self._dict) > 0
 
+    def __setitem__(self, attribute, val):
+        self._dict[attribute] = val
+
+    def __getitem__(self, attribute, val):
+        return self._dict[attribute]
+
     def __getattr__(self, attribute, recursive=True):
         '''
         >>> from music21.schema import style
