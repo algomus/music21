@@ -66,10 +66,12 @@ defaultStyleDict = {
     'triangleYPadding': 2,           # additional padding between top/bottom of the diagram and the triangle
     'triangleScale': 1.0,
 
-
     # SvgLine
     'lineAllowOverlaps': True,       # if False, overlaping Boxes will be shifted in svg output
     'lineDisplayName': False,
+
+    # Graduations
+    'graduationKey': 'bar-number',   # bar-number, offset
 }
 
 

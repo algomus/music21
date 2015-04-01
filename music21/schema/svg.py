@@ -410,6 +410,15 @@ class Graduations(object):
     '''
     Graduations for bar numbers at regular intervals,
     assuming a fixed meter of 'ratioString'.
+
+    Used style properties: (TODO -> better document)
+       graduationKey       # bar-number, offset
+
+       fontSize
+       fontFamily
+
+       color
+       opacity
     '''
 
     def __init__(self, highestOffset, ratioString, styleSheet):
@@ -473,7 +482,7 @@ class Graduations(object):
                                      'text-anchor': 'middle',
                                      'style': "fill:%s" % self._style.colorAfterOpacity.hex,
                                  },
-                                 content=str(i))
+                                 content=str(offset) if self._style.graduationKey == 'offset' else str(i))
 
         svgWriter.add(ret, 0)
 
