@@ -181,6 +181,8 @@ RED = Color(255, 0, 0, Fore.RED)
 GREEN = Color(0, 255, 0, Back.GREEN)
 BLUE = Color(0, 0, 255, Fore.BLUE)
 YELLOW = Color(255, 200, 0, Back.YELLOW)
+WHITE = Color(255, 255, 255, Back.WHITE)
+BLACK = Color(0, 0, 0, Fore.BLACK)
 
 
 # -----------------------------------------------------------------------------
