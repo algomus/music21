@@ -600,7 +600,6 @@ class SvgSchema(object):
     # TODO: We should move these constants to properties to the stylesheet.
     WIDTH = 1000
     DIAG_RIGHT_MARGIN = 0
-    LINE_HALF_SPACING = 4  # Half spacing between Lines. Top : one half, Middle : two halves, Bottom : one half
     HEIGHT_WHEN_EMPTY = 20
     TOP_PADDING = 23  # addGraduation
     BOTTOM_PADDING = 3
@@ -684,11 +683,11 @@ class SvgSchema(object):
         return self._scoreLabels
 
     def addLine(self, line):
-        self.height += self.LINE_HALF_SPACING
+        self.height += line._style.lineHalfSpacing
         line.yLine = self.height
         self._lines.append(line)
         self.height += line.height
-        self.height += self.LINE_HALF_SPACING
+        self.height += line._style.lineHalfSpacing
 
     def addLabel(self, label):
         self._labels.append(label)

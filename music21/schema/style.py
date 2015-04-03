@@ -70,6 +70,7 @@ defaultStyleDict = {
     'lineAllowOverlaps': True,       # if False, overlaping Boxes will be shifted in svg output
     'lineDisplayName': False,
     'lineNameWidth': 40,
+    'lineHalfSpacing': 4,            # Half spacing between Lines. Top : one half, Middle : two halves, Bottom : one half
 
     # Graduations
     'graduationKey': 'bar-number',   # bar-number, offset
