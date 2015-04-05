@@ -211,7 +211,6 @@ class Style(object):
         if attribute in self.__dict__:
             return self.__dict__[attribute]
 
-        attr = None
         if attribute == 'opacity' and recursive:
             if self.exportOpacity:
                 attr = self.__getattr__('opacity', False)
@@ -231,10 +230,10 @@ class Style(object):
         elif self.parentKind:
             attr = getattr(self.parentKind, attribute)
 
-        if attr is None:
-            raise AttributeError("'%s' not defined in " % attribute + str(self))
         else:
-            return attr
+            raise AttributeError("'%s' not defined in " % attribute + str(self))
+
+        return attr
 
     def __str__(self):
         return '%s/%s' % (self.parentKind if self.parentKind else '', self.kind)
