@@ -53,6 +53,7 @@ defaultStyleDict = {
     # svg.Box
     'boxHeight': 18,
     'boxRoundedCorners': 3,
+    'boxStrokeColor': None,
     'boxTextXPadding': 5,             # padding inside the box
     'boxTextColor': Color(0, 0, 0),
 

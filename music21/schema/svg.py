@@ -169,6 +169,7 @@ class Box(SvgLabel):
     Used style properties: (TODO -> better document)
        boxHeight
        boxRoundedCorners
+       boxStrokeColor
 
        boxTextXPadding
        boxTextColor
@@ -203,6 +204,7 @@ class Box(SvgLabel):
                                      'height': self._style.boxHeight,
                                      'width': self.width(xZoom),
                                      'ry': self._style.boxRoundedCorners,
+                                     'style': '' if self._style.boxStrokeColor is None else "stroke:%s;stroke-width:2" % self._style.boxStrokeColor.hex,
                                      'fill': self._style.colorAfterOpacity.hex,
                                      'opacity': self._style.opacity,
                                  })
