@@ -645,7 +645,8 @@ class SvgSchema(object):
             line = SvgLine(part, styleSheet)
 
             for label in part.getElementsByClass('Label'):
-                svgThisLabel = styleSheet[label.kind].svg
+                style = styleSheet[label.kind]
+                svgThisLabel = style.svg
 
                 l = svgThisLabel(label, styleSheet)
 
@@ -655,7 +656,7 @@ class SvgSchema(object):
                     line.addLabel(l)
 
                 # Add to ._scoreLabels labels for score snippets
-                if generateExtracts and svgThisLabel.hasScore:
+                if generateExtracts and svgThisLabel.hasScore and style.extractWebScore:
                     label.activeSite = part
                     if len(label.extractPattern()):
                         l.cssClass = 'clickablelabel'

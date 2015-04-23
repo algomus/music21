@@ -50,6 +50,8 @@ defaultStyleDict = {
     'fontSize': 12,
     'fontFamily': 'Helvetica',
 
+    'extractWebScore': True,          # if False, do not generate a score snippet on the web output
+
     # svg.Box
     'boxHeight': 18,
     'boxRoundedCorners': 3,
