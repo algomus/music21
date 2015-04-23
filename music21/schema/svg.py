@@ -611,7 +611,7 @@ class SvgSchema(object):
     NAME_POS_X = 10
     NAME_FONT_SIZE = 12
 
-    def __init__(self, score, styleSheet, measureStream=None):
+    def __init__(self, score, styleSheet, measureStream=None, generateExtracts=False):
         self.name = score.metadata.title if score.metadata else score.id  # schema.name
         self._lines = []
 
@@ -655,7 +655,7 @@ class SvgSchema(object):
                     line.addLabel(l)
 
                 # Add to ._scoreLabels labels for score snippets
-                if svgThisLabel.hasScore:
+                if generateExtracts and svgThisLabel.hasScore:
                     label.activeSite = part
                     if len(label.extractPattern()):
                         l.cssClass = 'clickablelabel'

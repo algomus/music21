@@ -200,7 +200,7 @@ class WebSchemaSet(object):
         if not isinstance(scoreOrListOfScores, list):
             scoreOrListOfScores = [scoreOrListOfScores]
         for score in scoreOrListOfScores:
-            schema = svg.SvgSchema(score, styleSheet)
+            schema = svg.SvgSchema(score, styleSheet, generateExtracts=True)
             self._svgSchemas.append(schema)
 
         self.severalSchemas = (len(self._svgSchemas) > 1)
