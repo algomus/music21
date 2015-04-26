@@ -191,28 +191,44 @@ class Style(object):
 
     def __getattr__(self, attribute, recursive=True):
         '''
+        Get the style by a hierarchical traversal of the stylesheet,
+        querying parent style if the property is not defined here.
+
         >>> from music21.schema import style
-        >>> mystyle = style.Style(style.DEFAULT_STYLE_KIND, {'exportOpacity': False, 'foo': 1})
-        >>> print(mystyle)
+        >>> from music21.schema.colors import Color
+
+        >>> defaultStyle = style.Style('default', { 'colorBackground': Color(255, 255, 255), 'opacity': 1.0, 'colorOpacity': 1.0, 'exportOpacity': True})
+        >>> print(defaultStyle)
         /default
-        >>> mystyle.exportOpacity
-        False
-        >>> mystyle.foo
-        1
-        >>> mystyle.bar
+
+        >>> defaultStyle.colorBackground.hex
+        '#ffffff'
+
+        >>> defaultStyle.bar
         Traceback (most recent call last):
         ...
         AttributeError: 'bar' not defined in /default
-        >>> myotherstyle = style.Style('other', {'exportOpacity': True, 'bar': 2}, mystyle)
-        >>> print(myotherstyle)
-        /default/other
-        >>> myotherstyle.exportOpacity
-        True
-        >>> myotherstyle.foo
-        1
-        >>> myotherstyle.bar
-        2
 
+        >>> boxStyle = style.Style('other', { 'color': Color(255, 0, 0), 'opacity': 0.5}, parent=defaultStyle)
+        >>> print(boxStyle)
+        /default/other
+
+        >>> boxStyle.color.hex
+        '#ff0000'
+        >>> boxStyle.colorBackground.hex
+        '#ffffff'
+
+
+        If 'exportOpacity' is set to False, the 'opacity' is not exported,
+        but 'colorAfterOpacity' is computed by mixing 'color' and 'colorBackground' with the suitable 'opacity'.
+        This allows to have a decent output for display methods that do not correctly handle transparency.
+
+        >>> boxStyle.opacity, boxStyle.colorAfterOpacity.hex
+        (0.5, '#ff0000')
+
+        >>> boxStyle.exportOpacity = False
+        >>> boxStyle.opacity, boxStyle.colorAfterOpacity.hex
+        (1.0, '#ff7f7f')
         '''
 
         if attribute in self.__dict__:
