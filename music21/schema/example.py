@@ -141,8 +141,8 @@ def outputExampleSchema():
     # Lilypond
     print("Lilypond:")
     outLily = lily.LilySchema(score, styleObj)
+    outLily.write(fmt = 'lilypond', fileName = 'midi.ly', withMidiOut = True)
     outLily.show('lily.pdf')
-    outLily.show('lily.png')
 
 
 # =============================================================================
