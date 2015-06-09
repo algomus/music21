@@ -323,7 +323,10 @@ class ConverterLilypond(SubConverter):
             return convertedFilePath
         
         else:
-            dataStr = conv.textFromMusic21Object(obj).encode('utf-8')
+            if 'withMidiOut' in keywords and keywords['withMidiOut'] is True:
+                dataStr = conv.textFromMusic21Object(obj, True).encode('utf-8')
+            else:
+                dataStr = conv.textFromMusic21Object(obj).encode('utf-8')
             fp = self.writeDataStream(fp, dataStr)
             return fp
 

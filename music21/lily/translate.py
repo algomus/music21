@@ -114,8 +114,11 @@ class LilypondConverter(object):
      '''.lstrip()
     bookHeader = r'''
     \include "lilypond-book-preamble.ly"
+    '''.lstrip()
+    schemaBoxHeader = r'''
     \include "frameEngraver-box.ly"
     '''.lstrip()
+    
 
     accidentalConvert = {"double-sharp": u"isis",
                          "double-flat": u"eses",
@@ -204,7 +207,7 @@ class LilypondConverter(object):
         #self.minorVersion = 13
         self.versionString = self.topLevelObject.backslash + "version " + self.topLevelObject.quoteString(str(self.majorVersion) + '.' + str(self.minorVersion) + '.' + str(self.editVersion))
         self.versionScheme = lyo.LyEmbeddedScm(self.versionString)
-        self.headerScheme  = lyo.LyEmbeddedScm(self.bookHeader)
+        self.headerScheme  = lyo.LyEmbeddedScm(self.bookHeader + self.schemaBoxHeader)
 
         self.backend  = 'ps'
 
@@ -229,7 +232,7 @@ class LilypondConverter(object):
 
 
     #------------ Set a complete Lilypond Tree from a music21 object ----------#
-    def textFromMusic21Object(self, m21ObjectIn):
+    def textFromMusic21Object(self, m21ObjectIn, withMidiOut = False):
         r'''
         get a proper lilypond text file for writing from a music21 object
 
@@ -253,12 +256,12 @@ class LilypondConverter(object):
         \paper { }
         ...
         '''
-        self.loadFromMusic21Object(m21ObjectIn)
+        self.loadFromMusic21Object(m21ObjectIn, withMidiOut)
         s = str(self.topLevelObject)
         s = re.sub(r'\s*\n\s*\n', '\n', s).strip()
         return s
 
-    def loadFromMusic21Object(self, m21ObjectIn):
+    def loadFromMusic21Object(self, m21ObjectIn, withMidiOut = False):
         r'''
         Create a Lilypond object hierarchy in self.topLevelObject from an
         arbitrary music21 object.
@@ -285,7 +288,7 @@ class LilypondConverter(object):
             scoreObj.insert(0, m21ObjectIn)
             self.loadObjectFromScore(scoreObj, makeNotation = False)
         elif 'Score' in c:
-            self.loadObjectFromScore(m21ObjectIn, makeNotation = False)
+            self.loadObjectFromScore(m21ObjectIn, makeNotation = False, withMidiOut = withMidiOut)
         elif 'Opus' in c:
             self.loadObjectFromOpus(m21ObjectIn, makeNotation = False)
         else: # treat as part...
@@ -339,7 +342,7 @@ class LilypondConverter(object):
         self.context.contents = contents
 
 
-    def loadObjectFromScore(self, scoreIn = None, makeNotation = True):
+    def loadObjectFromScore(self, scoreIn = None, makeNotation = True, withMidiOut = False):
         r'''
 
         creates a filled topLevelObject (lily.lilyObjects.LyLilypondTop)
@@ -356,18 +359,25 @@ class LilypondConverter(object):
             scoreIn = scoreIn.makeNotation(inPlace = False)
 
         lpVersionScheme = self.versionScheme
-        lpHeaderScheme = self.headerScheme
+        if withMidiOut:
+            # del macros for book preamble
+            lpHeaderScheme = lyo.LyEmbeddedScm(self.schemaBoxHeader)
+        else :
+            lpHeaderScheme = self.headerScheme
         lpColorScheme = lyo.LyEmbeddedScm(self.colorDef)
         lpHeader = lyo.LyLilypondHeader()
 
         # here's the heavy work...
-        lpScoreBlock = self.lyScoreBlockFromScore(scoreIn)
+        lpScoreBlock = self.lyScoreBlockFromScore(scoreIn, withMidiOut)
 
-        lpOutputDefHead = lyo.LyOutputDefHead(defType = 'paper')
-        lpOutputDefBody = lyo.LyOutputDefBody(outputDefHead = lpOutputDefHead)
-        lpOutputDef = lyo.LyOutputDef(outputDefBody = lpOutputDefBody)
-        lpLayout = lyo.LyLayout()
-        contents = [lpVersionScheme, lpHeaderScheme, lpColorScheme, lpHeader, lpScoreBlock, lpOutputDef, lpLayout]
+        contents = [lpVersionScheme, lpHeaderScheme, lpColorScheme, lpHeader, lpScoreBlock]
+        if not withMidiOut:
+            lpOutputDefHead = lyo.LyOutputDefHead(defType = 'paper')
+            lpOutputDefBody = lyo.LyOutputDefBody(outputDefHead = lpOutputDefHead)
+            lpOutputDef = lyo.LyOutputDef(outputDefBody = lpOutputDefBody)
+            lpLayout = lyo.LyLayout()
+            contents.append(lpOutputDef)
+            contents.append(lpLayout)
 
         if scoreIn.metadata is not None:
             self.setHeaderFromMetadata(scoreIn.metadata, lpHeader = lpHeader)
@@ -376,7 +386,7 @@ class LilypondConverter(object):
 
 
     #------- return Lily objects or append to the current context -----------#
-    def lyScoreBlockFromScore(self, scoreIn):
+    def lyScoreBlockFromScore(self, scoreIn, withMidiOut = False):
 
         lpCompositeMusic = lyo.LyCompositeMusic()
         self.newContext(lpCompositeMusic)
@@ -397,6 +407,16 @@ class LilypondConverter(object):
 
         lpMusic = lyo.LyMusic(compositeMusic = lpCompositeMusic)
         lpScoreBody = lyo.LyScoreBody(music = lpMusic)
+        
+        if withMidiOut:
+            # midi out
+            lpOutputDefHeadMidi = lyo.LyOutputDefHead(defType = 'midi')
+            lpOutputDefBodyMidi = lyo.LyOutputDefBody(outputDefHead = lpOutputDefHeadMidi)
+            lpOutputDefMidi = lyo.LyOutputDef(outputDefBody = lpOutputDefBodyMidi)
+            lpScoreBody = lyo.LyScoreBody(scoreBody = lpScoreBody, outputDef = lpOutputDefMidi)
+            # pdf out
+            lpScoreBody = lyo.LyScoreBody(scoreBody = lpScoreBody, outputDef = lyo.LyLayout())
+        
         lpScoreBlock = lyo.LyScoreBlock(scoreBody = lpScoreBody)
         self.restoreContext()
 
