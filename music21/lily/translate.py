@@ -198,10 +198,11 @@ class LilypondConverter(object):
         
         self.majorVersion = versionPieces[0]
         self.minorVersion = versionPieces[1]
+        self.editVersion = versionPieces[2]
 
         #self.majorVersion = 2 # this should be obtained from user and/or user's system
         #self.minorVersion = 13
-        self.versionString = self.topLevelObject.backslash + "version " + self.topLevelObject.quoteString(str(self.majorVersion) + '.' + str(self.minorVersion))
+        self.versionString = self.topLevelObject.backslash + "version " + self.topLevelObject.quoteString(str(self.majorVersion) + '.' + str(self.minorVersion) + '.' + str(self.editVersion))
         self.versionScheme = lyo.LyEmbeddedScm(self.versionString)
         self.headerScheme  = lyo.LyEmbeddedScm(self.bookHeader)
 
