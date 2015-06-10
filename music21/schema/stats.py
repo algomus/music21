@@ -380,6 +380,18 @@ class SchemaDiff(object):
 
         return self.diff
 
+    def __getCountsOfKind(self, diffFlatDict, kind):
+        '''
+        XXX used to avoid "self.diff[key].flat.getElementsByClass('Label')" many times XXX
+        '''
+        counts = Counts()
+        for key in diffFlatDict:
+            for label in diffFlatDict[key]:
+                if label.kind == kind or kind is None:
+                    counts.counts[key] += 1
+        counts.compute()
+        return counts
+
     def getCountsOfKind(self, kind=None):
         '''
         Returns a :class:`~music21.schema.stats.Counts` XXX,
@@ -406,14 +418,11 @@ class SchemaDiff(object):
         >>> print(shemDif.getCountsOfKind())
         TP:   1   FP:   1   FN:   1  sens:  1/  2   50.0%  prec:  1/  2   50.0%  F1: 0.500
         '''
-
-        counts = Counts()
+        
+        diffFlatDict = {}
         for key in self.diff:
-            for label in self.diff[key].flat.getElementsByClass('Label'):
-                if label.kind == kind or kind is None:
-                    counts.counts[key] += 1
-        counts.compute()
-        return counts
+            diffFlatDict[key] = self.diff[key].flat.getElementsByClass('Label')
+        return self.__getCountsOfKind(diffFlatDict, kind)
 
     def getStatsByKind(self, tag=''):
         '''
@@ -445,8 +454,14 @@ class SchemaDiff(object):
         '''
 
         s = " %s startDeltaOffset=%s - endDeltaOffset=%s\n" % (tag, self.startDeltaOffset, self.endDeltaOffset)
+
+        diffFlatDict = {}
+        for key in self.diff:
+            diffFlatDict[key] = self.diff[key].flat.getElementsByClass('Label')
+
         for kind in self.kinds + [None]:
-            counts = self.getCountsOfKind(kind)
+#           counts = self.getCountsOfKind(kind)
+            counts = self.__getCountsOfKind(diffFlatDict, kind)
             s += " %s   %-8s ==> %s\n" % (tag, kind if kind else '::::::::', counts)
 
         return s
@@ -454,7 +469,6 @@ class SchemaDiff(object):
     def __str__(self):
         return self.getStatsByKind()
 # ------------------------------------------------------------------------------
-
 
 class MutualInformationSchema(object):
 
@@ -792,6 +806,40 @@ class TestCompareSchemas(unittest.TestCase):
         schemadiff.compareSchemas(self.score0, self.score0)
         c = schemadiff.getCountsOfKind()
         self.assertEqual((c.counts[TP], c.counts[FP], c.counts[FN]), (6, 0, 0))
+
+
+class TestSpeed(unittest.TestCase):
+    POW = 10
+
+    def setUp(self):
+        from music21.schema import Label
+
+        self.score0 = music21.stream.Score()
+        a0 = music21.stream.Part()
+        self.score0.append(a0)
+        a0.id = 'S'
+        for i in range(0, 2 ** self.POW):
+            a0.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
+
+        self.score1 = music21.stream.Score()
+        a1 = music21.stream.Part()
+        self.score1.append(a1)
+        a1.id = 'S'
+        for i in range(0, 2 ** self.POW):
+            a1.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
+
+    def _testAnalysisAvsB(self):
+        from music21.schema import speed
+        speed.speed("Begin")
+        schemadiff = music21.schema.stats.SchemaDiff('testAnalysisAvsB')
+        speed.speed("SchemaDiff")
+        schemadiff.compareSchemas(self.score0, self.score1)
+        speed.speed("compareSchemas")
+        self.assertEqual((len(schemadiff.diff[TP].flat), len(schemadiff.diff[FP].flat), len(schemadiff.diff[FN].flat)), (2 ** self.POW, 0, 0))
+        speed.speed("assertEqual")
+        _getStats = schemadiff.getStatsByKind()
+        speed.speed("getStatsByKind")
+
 
 
 class TestMutualInformationSchema(unittest.TestCase):
