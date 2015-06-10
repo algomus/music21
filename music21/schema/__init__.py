@@ -130,7 +130,6 @@ class Label(Music21Object):
         '''
         if not isinstance(other, Label):
             return False
-
         return (
             self.offset == other.offset and
             self.duration == other.duration and
@@ -139,9 +138,21 @@ class Label(Music21Object):
             self.weight == other.weight
         )
 
-    def __hash__(self):
-        # Enable 'label in list' with python3
-        return id(self)
+    # def __hash__(self):
+          # https://docs.python.org/2/reference/datamodel.html#object.__hash__
+          # "Changed in version 2.6: __hash__ may now be set to None to explicitly flag instances of a class as unhashable."
+          # 
+          # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+          # "A class that overrides __eq__() and does not define __hash__() will have its __hash__() implicitly set to None. 
+          #    When the __hash__() method of a class is None, instances of the class will raise an appropriate TypeError when 
+          #    a program attempts to retrieve their hash value [...]
+          #
+          # "The only required property is that objects which compare equal have the same hash value"
+          #
+          # print("__hash__ %s" % (self))
+          ## return id(self)
+          # return hash(repr(self))
+    __hash__ = None
 
     def compare(
             self,
@@ -522,6 +533,19 @@ class TestLabel(unittest.TestCase):
         self.labelTest.duration = music21.duration.Duration(self.label.duration.quarterLength + 1.0)
         self.assertNotEqual(self.label, self.labelTest)
 
+    def testList(self):
+        labelTest0 = Label(offset=0, duration=None, kind="kind", tag="tag")
+        labelTest2 = Label(offset=2, duration=music21.duration.Duration(5), kind="kind", tag="tag")
+        labelList = [labelTest0, self.label, labelTest2]
+
+        self.assertTrue(self.label in labelList)
+        self.assertTrue(self.labelTest in labelList)
+        self.assertTrue(labelTest2 in labelList)
+
+        labelList.remove(self.labelTest)
+        self.assertFalse(self.label in labelList)
+        self.assertFalse(self.labelTest in labelList)
+        self.assertEqual(labelList, [labelTest0, labelTest2])
 
 # -----------------------------------------------------------------------------
 

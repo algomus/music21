@@ -261,17 +261,15 @@ class SchemaDiff(object):
             diff[key] = music21.stream.Part()
             diff[key].id = '%s-%s' % (part1.id, key)
 
-        usedLabel2s = set()
-
+        usedLabel2s = None
         # Labels in part1 are either true (TP) or false (FP) positives
-        part1Labels = part1.getElementsByClass('Label')
-        part2Labels = part2.getElementsByClass('Label')
-        for label1 in part1Labels:
+        part2Labels = list(part2.getElementsByClass('Label'))
+        for label1 in part1.getElementsByClass('Label'):
 
             if label1.kind in self.kindsIgnore:
                 continue
 
-            if not label1.kind in self.kinds:
+            if label1.kind not in self.kinds:
                 self.kinds.append(label1.kind)
 
             found = False
@@ -280,21 +278,19 @@ class SchemaDiff(object):
                 if label2.kind in self.kindsIgnore:
                     continue
 
-                if label2 in usedLabel2s:
-                    match = False
-                else:
-                    match = music21.schema.Label.compare(label1, label2,
-                                                         startDeltaOffset=startDeltaOffset,
-                                                         endDeltaOffset=endDeltaOffset,
-                                                         checkTag=checkTag)
+                match = music21.schema.Label.compare(label1, label2,
+                                                     startDeltaOffset=startDeltaOffset,
+                                                     endDeltaOffset=endDeltaOffset,
+                                                     checkTag=checkTag)
                 if match:
                     # environLocal.printDebug(["match", "\t", label1, "\t", label2])
-                    usedLabel2s.add(label2)
+                    usedLabel2s = label2
                     found = True
                     break
 
             if found:
                 diff[TP].insert(label1.offset, label1)
+                part2Labels.remove(usedLabel2s)
                 environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[TP].id, label1))
             else:
                 diff[FP].insert(label1.offset, label1)
@@ -306,16 +302,14 @@ class SchemaDiff(object):
             if label2.kind in self.kindsIgnore:
                 continue
 
-            if not label2.kind in self.kinds:
+            if label2.kind not in self.kinds:
                 self.kinds.append(label2.kind)
 
-            if label2 not in usedLabel2s:
-                diff[FN].insert(label2.offset, label2)
-                environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[FN].id, label2))
+            diff[FN].insert(label2.offset, label2)
+            environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[FN].id, label2))
 
         # Output stat by voice
         # print "   %-8s ==>" % part1.id, STATS_FORMAT % stats_compute(diff)
-
         return diff
 
     def compareSchemas(self, schema1, schema2,
@@ -811,6 +805,7 @@ class TestCompareSchemas(unittest.TestCase):
 
 
 class TestSpeed(unittest.TestCase):
+    # python -munittest music21.schema.stats.TestSpeed._testAnalysisAvsB
     POW = 10
 
     def setUp(self):
