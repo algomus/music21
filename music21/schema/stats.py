@@ -261,7 +261,6 @@ class SchemaDiff(object):
             diff[key] = music21.stream.Part()
             diff[key].id = '%s-%s' % (part1.id, key)
 
-        usedLabel2s = None
         # Labels in part1 are either true (TP) or false (FP) positives
         part2Labels = list(part2.getElementsByClass('Label'))
         for label1 in part1.getElementsByClass('Label'):
@@ -272,6 +271,7 @@ class SchemaDiff(object):
             if label1.kind not in self.kinds:
                 self.kinds.append(label1.kind)
 
+            usedLabel2s = None
             found = False
             for label2 in part2Labels:
 
@@ -464,7 +464,9 @@ class SchemaDiff(object):
 
     def __str__(self):
         return self.getStatsByKind()
+
 # ------------------------------------------------------------------------------
+
 
 class MutualInformationSchema(object):
 
@@ -489,7 +491,6 @@ class MutualInformationSchema(object):
 
         # Iterate over all labels and build counts of Labels
         # This could be more efficient, by sorting first all the labels
-
         for part1 in schema1:
             for label1 in part1.getElementsByClass('Label'):
                 found = False
