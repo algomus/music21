@@ -264,7 +264,9 @@ class SchemaDiff(object):
         usedLabel2s = set()
 
         # Labels in part1 are either true (TP) or false (FP) positives
-        for label1 in part1.getElementsByClass('Label'):
+        part1Labels = part1.getElementsByClass('Label')
+        part2Labels = part2.getElementsByClass('Label')
+        for label1 in part1Labels:
 
             if label1.kind in self.kindsIgnore:
                 continue
@@ -273,7 +275,7 @@ class SchemaDiff(object):
                 self.kinds.append(label1.kind)
 
             found = False
-            for label2 in part2.getElementsByClass('Label'):
+            for label2 in part2Labels:
 
                 if label2.kind in self.kindsIgnore:
                     continue
@@ -299,7 +301,7 @@ class SchemaDiff(object):
                 environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[FP].id, label1))
 
         # Remaining Labels in part2 are false negatives (FN)
-        for label2 in part2.getElementsByClass('Label'):
+        for label2 in part2Labels:
 
             if label2.kind in self.kindsIgnore:
                 continue
