@@ -90,7 +90,7 @@ class LilySchema(object):
     def _insertLabelInPart(self, label, part, styleSheet):
         startOffset = label.offset
         startMeasure = part.getElementsByOffset(offsetStart=startOffset, mustBeginInSpan=False, classList=['Measure'])[0]
-
+                
         if label.duration.quarterLength == 0:
             color = styleSheet[label.kind].color
             mark = Mark(label.tag, color.scheme)
@@ -108,11 +108,15 @@ class LilySchema(object):
 
             endOffset = label.offset + label.duration.quarterLength
             # endMeasure = self._measureThatContainsOffset(part, endOffset)
-            endMeasure = part.getElementsByOffset(offsetStart=endOffset,
-                                                  offsetEnd=endOffset + 1,
+            if endOffset < part.duration.quarterLength :
+                endMeasure = part.getElementsByOffset(offsetStart=endOffset,
+                                                  #offsetEnd=endOffset + 1,
                                                   mustBeginInSpan=False,
                                                   classList=['Measure']
                                                   )[0]
+            else : # get the last measure of the part - may be a more direct (smart) way to get it...
+                endMeasure = part.measures(numberStart=1, numberEnd=None)[-1]
+                
             boxEnd = BoxEnd()
             boxEnd.priority = -10
             endMeasure.insert(endOffset - endMeasure.offset, boxEnd)
