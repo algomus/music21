@@ -75,12 +75,17 @@ class LilySchema(object):
 
         # Prepare the labels
         for part in self.score.parts:
-            targetPart = part if len(part.flat.notes) else defaultPart
-            for label in targetPart.getElementsByClass('Label'):
-                if filterFunction:
-                    if not filterFunction(label):
-                        continue
-                self._insertLabelInPart(label, targetPart, styleSheet)
+            if len(part.flat.notes):
+                for label in part.getElementsByClass('Label'):
+                    if filterFunction:
+                        if not filterFunction(label):
+                            continue
+                    self._insertLabelInPart(label, part, styleSheet)
+            else :
+                # TODO: a part without note for global labels
+                # specific process not implemented yet...
+                # no use of defaultPartId for the moment
+                continue
 
     def _insertLabelInPart(self, label, part, styleSheet):
         startOffset = label.offset
