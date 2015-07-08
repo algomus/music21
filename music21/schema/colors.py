@@ -150,6 +150,10 @@ class AnsiFore(object):
 
 
 class AnsiBack(object):
+    '''
+    >>> print(AnsiBack().BLACK)
+    40
+    '''
     BLACK = 40
     RED = 41
     GREEN = 42
@@ -186,8 +190,8 @@ BLACK = Color(0, 0, 0, Fore.BLACK)
 
 
 # -----------------------------------------------------------------------------
-class TestColors(unittest.TestCase):
-    def runTest(self):
+class Test(unittest.TestCase):
+    def setUp(self):
         pass
 
     def testConstant(self):
@@ -200,4 +204,4 @@ _DOC_ORDER = [Color, AnsiCodes, AnsiStyle, AnsiFore, AnsiBack]
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     import music21
-    music21.mainTest(TestColors)
+    music21.mainTest(Test)
