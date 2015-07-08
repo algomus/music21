@@ -1006,7 +1006,8 @@ class Test(unittest.TestCase):
         self.assertEqual(self.__getBoxElement('rect').attributes["y"], 0)
 
     def testBoxRectXShouldBeOffsetPlusMargin(self):  # xZoom=1
-        self.assertEqual(self.__getBoxElement('rect').attributes["x"], self.label.offset + SvgSchema.LINE_NAME_WIDTH)
+        self.assertEqual(self.__getBoxElement('rect').attributes["x"],
+                         self.label.offset + self.style[music21.schema.style.DEFAULT_STYLE_KIND].lineNameWidth)
 
     def testSameBoxesShouldNotOverlappedEachOther(self):
         self.line.addLabel(self.box)
