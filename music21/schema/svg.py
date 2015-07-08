@@ -970,14 +970,17 @@ class Test(unittest.TestCase):
             self.kind = kind
 
     def setUp(self):
+        import music21.schema.style
         self.style = music21.schema.style.StyleSheet()
-        self.label = music21.schema.Label(offset=3, duration=17, kind='toto')
+        self.style.addStyle('kind', {'lineAllowOverlaps': False})
+        self.style.addStyle('foo', {'fontSize': 12})
+
+        self.label = music21.schema.Label(offset=3, duration=17, kind='foo')
         self.box = Box(self.label, self.style)
         svgWriter = SvgWriter()
         self.box.render(svgWriter, xZoom=1, y=0)
         self.svgBox = svgWriter.children[0][1]
         part = self.Part("id", "kind")
-        self.style.addStyle('kind', {'lineAllowOverlaps': False})
         self.line = SvgLine(part, self.style)
 
     def __testSvgBoxShouldContainElement(self, element):
@@ -999,8 +1002,8 @@ class Test(unittest.TestCase):
                 return child[1]
         return None
 
-    def testBoxTextShouldBeToto(self):
-        self.assertEqual(self.__getBoxElement('text').content, 'toto')
+    def testBoxTextShouldBeFoo(self):
+        self.assertEqual(self.__getBoxElement('text').content, 'foo')
 
     def testBoxRectYShouldBeZero(self):
         self.assertEqual(self.__getBoxElement('rect').attributes["y"], 0)
