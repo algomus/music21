@@ -922,8 +922,8 @@ class TestSvgSchema(unittest.TestCase):
         self.assertRegexpMatches(schema.render().render(),
                                  '<g class="schema" id="myscore" transform="translate.*">' +
                                      '<g >' +
-                                         '<rect fill="#f0f0f0" height="55" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
-                                         '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="30">' +
+                                         '<rect fill="#f0f0f0" height="[0-9]+" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
+                                         '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="[0-9]+">' +
                                              'myscore' +
                                          '</text>' +
                                      '</g>' +
@@ -949,13 +949,13 @@ class TestSvgSchemaSet(unittest.TestCase):
         schemaSet = SvgSchemaSet("myschemaset")
         schemaSet.addSchema(score, music21.schema.style.StyleSheet())
         self.assertRegexpMatches(schemaSet.render(),
-                                 '<svg height="85" width="1040" xmlns="http://www.w3.org/2000/svg">' +
+                                 '<svg height="[0-9]+" width="1040" xmlns="http://www.w3.org/2000/svg">' +
                                      '<g >' +
                                     '<text font-size="16" font-style="italic" x="10" y="20">myschemaset</text>\n' +
                                          '<g class="schema" id="myscore" transform="translate.*">' +
                                              '<g >' +
-                                                 '<rect fill="#f0f0f0" height="55" stroke="#cccccc" width="1040" x="0" y="30"/>\n' +
-                                                 '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="60">myscore</text>' +
+                                                 '<rect fill="#f0f0f0" height="[0-9]+" stroke="#cccccc" width="1040" x="0" y="30"/>\n' +
+                                                 '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="[0-9]+">myscore</text>' +
                                              '</g>'+
                                          '</g>'+
                                      '</g>'+
