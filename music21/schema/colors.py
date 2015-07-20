@@ -151,7 +151,8 @@ class AnsiFore(object):
 
 class AnsiBack(object):
     '''
-    >>> print(AnsiBack().BLACK)
+    >>> from music21.schema import colors
+    >>> print(colors.AnsiBack().BLACK)
     40
     '''
     BLACK = 40

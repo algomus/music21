@@ -29,6 +29,14 @@ Schemas can be compared with (:class:`~music21.schema.stats.SchemaDiff`).
 Reference (in French): https://hal.archives-ouvertes.fr/hal-01135118v1
 '''
 
+from music21.schema import ansi
+from music21.schema import colors
+from music21.schema import lily
+from music21.schema import stats
+from music21.schema import style
+from music21.schema import svg
+from music21.schema import web
+
 import copy
 
 import music21.stream
@@ -387,6 +395,7 @@ class Segmentation(music21.stream.Part):
     '''
     A Segmentation is a succession of consecutive Labels.
 
+    >>> from music21.schema import Segmentation
     >>> seg = Segmentation([('A', 1), ('B', 5), ('A', 6.5)])
     >>> seg.show('text')
     {0.0} <music21.schema.Label segment-A A None offset=0.0 duration=1.0>

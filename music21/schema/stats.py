@@ -414,6 +414,8 @@ class SchemaDiff(object):
         >>> dictRes = shemDif.compareSchemas(s0, s1)
         >>> print(shemDif.getCountsOfKind())
         TP:   1   FP:   1   FN:   1  sens:  1/  2   50.0%  prec:  1/  2   50.0%  F1: 0.500
+        >>> print(shemDif.getCountsOfKind('a'))
+        TP:   1   FP:   0   FN:   1  sens:  1/  2   50.0%  prec:  1/  1  100.0%  F1: 0.667
         '''
         
         diffFlatDict = {}
@@ -427,6 +429,7 @@ class SchemaDiff(object):
 
         >>> import  music21.stream
         >>> from music21.schema import Label
+        >>> import music21.schema.stats
         >>> s0 = music21.stream.Score()
         >>> s0.insert(0, music21.stream.Part()); s0.parts[0].id = 'A'
         >>> s0.insert(0, music21.stream.Part()); s0.parts[1].id = 'B'
