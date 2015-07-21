@@ -136,8 +136,8 @@ def matchingPart(part1, schema2):
     >>> p2 = music21.stream.Part()
     >>> p1.id = 'S'; p2.id = 'A'
     >>> score = music21.stream.Score()
-    >>> score.append(p1)
-    >>> score.append(p2)
+    >>> score.insert(0, p1)
+    >>> score.insert(0, p2)
     >>> p = music21.stream.Part()
     >>> p.id = 'S'
     >>> music21.schema.stats.matchingPart(p, score) == p1
@@ -329,10 +329,10 @@ class SchemaDiff(object):
         >>> from music21.schema import Label
         >>> s0 = music21.stream.Score()
         >>> s0.insert(0, music21.stream.Part()); s0.parts[0].id = 'A'
-        >>> s0.insert(1, music21.stream.Part()); s0.parts[1].id = 'B'
+        >>> s0.insert(0, music21.stream.Part()); s0.parts[1].id = 'B'
         >>> s1 = music21.stream.Score()
         >>> s1.insert(0, music21.stream.Part()); s1.parts[0].id = 'A'
-        >>> s1.insert(1, music21.stream.Part()); s1.parts[1].id = 'B'
+        >>> s1.insert(0, music21.stream.Part()); s1.parts[1].id = 'B'
         >>> # 1 TP
         >>> s0.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag1_1'))
         >>> s1.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag2_1'))
@@ -399,10 +399,10 @@ class SchemaDiff(object):
         >>> from music21.schema import Label
         >>> s0 = music21.stream.Score()
         >>> s0.insert(0, music21.stream.Part()); s0.parts[0].id = 'A'
-        >>> s0.insert(1, music21.stream.Part()); s0.parts[1].id = 'B'
+        >>> s0.insert(0, music21.stream.Part()); s0.parts[1].id = 'B'
         >>> s1 = music21.stream.Score()
         >>> s1.insert(0, music21.stream.Part()); s1.parts[0].id = 'A'
-        >>> s1.insert(1, music21.stream.Part()); s1.parts[1].id = 'B'
+        >>> s1.insert(0, music21.stream.Part()); s1.parts[1].id = 'B'
         >>> # 1 TP
         >>> s0.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag1_1'))
         >>> s1.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag2_1'))
@@ -429,10 +429,10 @@ class SchemaDiff(object):
         >>> from music21.schema import Label
         >>> s0 = music21.stream.Score()
         >>> s0.insert(0, music21.stream.Part()); s0.parts[0].id = 'A'
-        >>> s0.insert(1, music21.stream.Part()); s0.parts[1].id = 'B'
+        >>> s0.insert(0, music21.stream.Part()); s0.parts[1].id = 'B'
         >>> s1 = music21.stream.Score()
         >>> s1.insert(0, music21.stream.Part()); s1.parts[0].id = 'A'
-        >>> s1.insert(1, music21.stream.Part()); s1.parts[1].id = 'B'
+        >>> s1.insert(0, music21.stream.Part()); s1.parts[1].id = 'B'
         >>> # 1 TP
         >>> s0.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag1_1'))
         >>> s1.parts[0].insert(Label(offset=1, duration=1, kind='a', tag='tag2_1'))
@@ -768,7 +768,7 @@ class TestCompareSchemas(unittest.TestCase):
         self.score0 = music21.stream.Score()
 
         a0 = music21.stream.Part()
-        self.score0.append(a0)
+        self.score0.insert(0, a0)
         a0.id = 'S'
         a0.insert(Label(offset=10, duration=4, kind='a', tag='a_oc1'))
         a0.insert(Label(offset=20, duration=4, kind='b', tag='b_oc1'))
@@ -776,7 +776,7 @@ class TestCompareSchemas(unittest.TestCase):
         a0.insert(Label(offset=40, duration=4, kind='b', tag='b_oc3'))
 
         a1 = music21.stream.Part()
-        self.score0.append(a1)
+        self.score0.insert(0, a1)
         a1.id = 'A'
         a1.insert(Label(offset=10, duration=4, kind='a', tag='a_oc1'))
         a1.insert(Label(offset=38, duration=4, kind='b', tag='b_oc3'))
@@ -785,14 +785,14 @@ class TestCompareSchemas(unittest.TestCase):
         self.score1 = music21.stream.Score()
 
         a0 = music21.stream.Part()
-        self.score1.append(a0)
+        self.score1.insert(0, a0)
         a0.id = 'S'
         a0.insert(Label(offset=10, duration=4, kind='a', tag='a_oc1'))
         a0.insert(Label(offset=20, duration=4, kind='b', tag='b_oc1'))
         a0.insert(Label(offset=30, duration=4, kind='b', tag='b_oc2'))
 
         a1 = music21.stream.Part()
-        self.score1.append(a1)
+        self.score1.insert(0, a1)
         a1.id = 'A'
         a1.insert(Label(offset=20, duration=4, kind='b', tag='b_oc1'))
         a1.insert(Label(offset=38, duration=4, kind='b', tag='b_oc3'))
@@ -836,14 +836,14 @@ class TestSpeed(unittest.TestCase):
 
         self.score0 = music21.stream.Score()
         a0 = music21.stream.Part()
-        self.score0.append(a0)
+        self.score0.insert(0, a0)
         a0.id = 'S'
         for i in range(0, 2 ** self.POW):
             a0.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
 
         self.score1 = music21.stream.Score()
         a1 = music21.stream.Part()
-        self.score1.append(a1)
+        self.score1.insert(0, a1)
         a1.id = 'S'
         for i in range(0, 2 ** self.POW):
             a1.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
@@ -868,7 +868,7 @@ class TestMutualInformationSchema(unittest.TestCase):
 
         self.score1 = music21.stream.Score()
         p1 = music21.stream.Part()
-        self.score1.append(p1)
+        self.score1.insert(0, p1)
 
         p1.insert(Label(offset=10, kind='a', tag='S'))
         p1.insert(Label(offset=20, kind='a', tag='S'))
@@ -877,7 +877,7 @@ class TestMutualInformationSchema(unittest.TestCase):
 
         self.score2 = music21.stream.Score()
         p2 = music21.stream.Part()
-        self.score2.append(p2)
+        self.score2.insert(0, p2)
 
         p2.insert(Label(offset=10, kind='i', tag='W'))
         p2.insert(Label(offset=20, kind='i', tag='Z'))

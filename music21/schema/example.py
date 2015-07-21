@@ -40,9 +40,9 @@ def buildExampleSchemas():
 
     # FIXME : web and lily output should work even without makeMeasures()
     score.insert(0, music21.stream.Part(music21.converter.parse(vlI).makeMeasures()))
-    score.insert(1, music21.stream.Part())
-    score.insert(2, music21.stream.Part())
-    score.insert(3, music21.stream.Part(music21.converter.parse(vc).makeMeasures()))
+    score.insert(0, music21.stream.Part())
+    score.insert(0, music21.stream.Part())
+    score.insert(0, music21.stream.Part(music21.converter.parse(vc).makeMeasures()))
 
     # Labels with duration
     score.parts[0].id = "1st Violin"
@@ -67,7 +67,7 @@ def buildExampleSchemas():
 
     # Labels without duration: events, such as cadences
     part = music21.stream.Part()
-    score.insert(4, part)
+    score.insert(0, part)
 
     part.insert(Label(offset=16, duration=8, kind='global', tag='extension'))
     part.insert(Label(offset=28, kind='cadence', tag='C:PAC'))
