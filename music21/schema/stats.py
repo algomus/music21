@@ -788,8 +788,6 @@ class TestCompareSchemas(unittest.TestCase):
     def testItself(self):
         schemadiff = music21.schema.stats.SchemaDiff('testItself')
         schemadiff.compareSchemas(self.score0, self.score0)
-        schemadiff.diff[TP].show('text')
-        schemadiff.diff[TP].flat.show('text')
         self.assertEqual((len(schemadiff.diff[TP].flat), len(schemadiff.diff[FP].flat), len(schemadiff.diff[FN].flat)), (6, 0, 0))
 
     def testAnalysisAvsB(self):
