@@ -652,14 +652,6 @@ class TestCompareParts(unittest.TestCase):
         self.a1.insert(Label(offset=38, duration=4, kind='b', tag='b_oc3'''))
 
     def testStr(self):   # FIXME: test a revoir
-        schemadiff = music21.schema.stats.SchemaDiff('test_str')
-        schemadiff.diff[TP] = self.a0
-        schemadiff.diff[FP] = self.a1
-        out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
-    :::::::: ==> TP:   0   FP:   0   FN:   0
-'''
-        self.assertEqual(str(schemadiff), out)
-
         schemadiff = music21.schema.stats.SchemaDiff('test_str', kinds=['cad', 'a', 'b'])
         schemadiff.diff[TP] = self.a0
         schemadiff.diff[FP] = self.a1
@@ -670,6 +662,26 @@ class TestCompareParts(unittest.TestCase):
     :::::::: ==> TP:   5   FP:   4   FN:   0  sens:  5/  5  100.0%  prec:  5/  9   55.6%  F1: 0.714
 '''
         self.assertEqual(str(schemadiff), out)
+
+    def testGetStatsByKind(self):
+        schemadiff = music21.schema.stats.SchemaDiff('testGetStatsByKind: kinds is None')
+        schemadiff.diff[TP] = self.a0
+        schemadiff.diff[FP] = self.a1
+        out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
+    :::::::: ==> TP:   0   FP:   0   FN:   0
+'''
+        self.assertEqual(schemadiff.getStatsByKind(), out)
+
+        ##
+        schemadiff = music21.schema.stats.SchemaDiff('testGetStatsByKind: kinds is not None', kinds=['cad', 'b'])
+        schemadiff.diff[TP] = self.a0
+        schemadiff.diff[FP] = self.a1
+        out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
+    cad      ==> TP:   1   FP:   1   FN:   0  sens:  1/  1  100.0%  prec:  1/  2   50.0%  F1: 0.667
+    b        ==> TP:   3   FP:   2   FN:   0  sens:  3/  3  100.0%  prec:  3/  5   60.0%  F1: 0.750
+    :::::::: ==> TP:   4   FP:   3   FN:   0  sens:  4/  4  100.0%  prec:  4/  7   57.1%  F1: 0.727
+'''
+        self.assertEqual(schemadiff.getStatsByKind(), out)
 
     def testEquals(self):
         diff = music21.schema.stats.SchemaDiff('testEquals')
