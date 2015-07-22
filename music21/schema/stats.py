@@ -383,7 +383,8 @@ class SchemaDiff(object):
         counts = Counts()
         for key in diffFlatDict:
             for label in diffFlatDict[key]:
-                if label.kind == kind or kind is None:
+                if((label.kind in self.kinds) and
+                   (label.kind == kind or kind is None)):
                     counts.counts[key] += 1
         counts.compute()
         return counts
@@ -655,6 +656,17 @@ class TestCompareParts(unittest.TestCase):
         schemadiff.diff[TP] = self.a0
         schemadiff.diff[FP] = self.a1
         out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
+    :::::::: ==> TP:   0   FP:   0   FN:   0
+'''
+        self.assertEqual(str(schemadiff), out)
+
+        schemadiff = music21.schema.stats.SchemaDiff('test_str', kinds=['cad', 'a', 'b'])
+        schemadiff.diff[TP] = self.a0
+        schemadiff.diff[FP] = self.a1
+        out = '''  startDeltaOffset=None - endDeltaOffset=None\n\
+    cad      ==> TP:   1   FP:   1   FN:   0  sens:  1/  1  100.0%  prec:  1/  2   50.0%  F1: 0.667
+    a        ==> TP:   1   FP:   1   FN:   0  sens:  1/  1  100.0%  prec:  1/  2   50.0%  F1: 0.667
+    b        ==> TP:   3   FP:   2   FN:   0  sens:  3/  3  100.0%  prec:  3/  5   60.0%  F1: 0.750
     :::::::: ==> TP:   5   FP:   4   FN:   0  sens:  5/  5  100.0%  prec:  5/  9   55.6%  F1: 0.714
 '''
         self.assertEqual(str(schemadiff), out)
