@@ -289,11 +289,11 @@ class SchemaDiff(object):
                     break
 
             if found:
-                diff[TP].insert(label1.offset, label1)
+                diff[TP].insert(label1)
                 part2Labels.remove(usedLabel2s)
                 environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[TP].id, label1))
             else:
-                diff[FP].insert(label1.offset, label1)
+                diff[FP].insert(label1)
                 environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[FP].id, label1))
 
         # Remaining Labels in part2 are false negatives (FN)
@@ -305,7 +305,7 @@ class SchemaDiff(object):
             if label2.kind not in self.kinds:
                 self.kinds.append(label2.kind)
 
-            diff[FN].insert(label2.offset, label2)
+            diff[FN].insert(label2)
             environLocal.printDebug("%8s :: %s :: %s" % (self.basename, diff[FN].id, label2))
 
         # Output stat by voice
