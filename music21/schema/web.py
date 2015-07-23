@@ -219,7 +219,7 @@ class WebSchemaSet(object):
                 ret += '<button class="schemabutton" id="schemabutton_%s%s">%s</button>' % (self.name, i, schema.name)
 
         # Render the content of the schemas in .svg
-        maxHighestOffset =  max([schema.highestOffset for schema in self._svgSchemas])
+        maxHighestOffset = max([schema.highestOffset for schema in self._svgSchemas])
         renderedSchemas = [schema.render(fixedHighestOffset=maxHighestOffset) for schema in self._svgSchemas]
 
         # Render the schema into <div><svg>...</svg></div> of the same height/width

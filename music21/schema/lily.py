@@ -82,7 +82,7 @@ class LilySchema(object):
                         if not filterFunction(label):
                             continue
                     self._insertLabelInPart(label, part, styleSheet)
-            else :
+            else:
                 # TODO: a part without note for global labels
                 # specific process not implemented yet...
                 # no use of defaultPartId for the moment
@@ -91,7 +91,7 @@ class LilySchema(object):
     def _insertLabelInPart(self, label, part, styleSheet):
         startOffset = label.offset
         startMeasure = part.getElementsByOffset(offsetStart=startOffset, mustBeginInSpan=False, classList=['Measure'])[0]
-                
+
         if label.duration.quarterLength == 0:
             color = styleSheet[label.kind].color
             mark = Mark(label.tag, color.scheme)
@@ -109,25 +109,24 @@ class LilySchema(object):
 
             endOffset = label.offset + label.duration.quarterLength
             # endMeasure = self._measureThatContainsOffset(part, endOffset)
-            if endOffset < part.duration.quarterLength :
+            if endOffset < part.duration.quarterLength:
                 endMeasure = part.getElementsByOffset(offsetStart=endOffset,
-                                                  #offsetEnd=endOffset + 1,
-                                                  mustBeginInSpan=False,
-                                                  classList=['Measure']
-                                                  )[0]
-            else : # get the last measure of the part - may be a more direct (smart) way to get it...
+                                                      # offsetEnd=endOffset + 1,
+                                                      mustBeginInSpan=False,
+                                                      classList=['Measure']
+                                                      )[0]
+            else:  # get the last measure of the part - may be a more direct (smart) way to get it...
                 endMeasure = part.measures(numberStart=1, numberEnd=None)[-1]
-                
+
             boxEnd = BoxEnd()
             boxEnd.priority = -10
             endMeasure.insert(endOffset - endMeasure.offset, boxEnd)
 
     def show(self, fmt=None, app=None, **keywords):
         return self.score.show(fmt, app)
-    
+
     def write(self, fmt=None, fileName=None, **keywords):
         return self.score.write(fmt, fileName, **keywords)
-    
 
 
 # -----------------------------------------------------------------------------

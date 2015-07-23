@@ -416,12 +416,12 @@ class Segmentation(music21.stream.Part):
             self.loadPairs(data, secondElementIsDuration=secondElementIsDuration)
 
     def loadPairs(self, pairs, secondElementIsDuration):
-        current_offset = 0
+        currentOffset = 0
         for (tag, secondElement) in pairs:
-            dur = secondElement if secondElementIsDuration else secondElement - current_offset
-            label = Label(offset=current_offset, duration=dur, kind="segment-%s" % tag, tag=tag)
+            dur = secondElement if secondElementIsDuration else secondElement - currentOffset
+            label = Label(offset=currentOffset, duration=dur, kind="segment-%s" % tag, tag=tag)
             self.insert(label)
-            current_offset += dur
+            currentOffset += dur
 
 
 # -----------------------------------------------------------------------------

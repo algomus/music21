@@ -1113,7 +1113,7 @@ class Test(unittest.TestCase):
             self.kind = kind
 
     def setUp(self):
-        import music21.schema.style
+        #import music21.schema.style
         self.style = music21.schema.style.StyleSheet()
         self.style.addStyle('kind', {'lineAllowOverlaps': False})
         self.style.addStyle('foo', {'fontSize': 12})
