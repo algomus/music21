@@ -602,11 +602,12 @@ def makeMeasures(
             # may need to handle spanners; already have s as site
             s.insert(e.getOffsetBySite(post), e)
 
+
 def makeRests(s, refStreamOrTimeRange=None, fillGaps=False,
-    timeRangeFromBarDuration=False, inPlace=True, splitDurationComponents=False):
+    timeRangeFromBarDuration=False, inPlace=True):
     '''
     Given a Stream with an offset not equal to zero,
-    fill with one or several Rest preceding this offset.
+    fill with one Rest preceding this offset.
     This can be called on any Stream,
     a Measure alone, or a Measure that contains
     Voices.
@@ -625,9 +626,6 @@ def makeRests(s, refStreamOrTimeRange=None, fillGaps=False,
 
     If `inPlace` is True, this is done in-place; if `inPlace` is False,
     this returns a modified deepcopy.
-
-    If `splitDurationComponents` is True, fill with a series of rests
-    according the duration of the components.
 
     ::
         >>> a = stream.Stream()
@@ -653,26 +651,6 @@ def makeRests(s, refStreamOrTimeRange=None, fillGaps=False,
         {20.0} <music21.note.Note C>        
         >>> b[0].duration.quarterLength
         20.0
-
-    Same thing, but this time, with splitDurationComponents...
-
-    ::
-        >>> a = stream.Stream()
-        >>> a.insert(2.625, note.Note())
-        >>> b = a.makeRests(splitDurationComponents = True, inPlace = False)
-        >>> len(b)
-        4
-        >>> b.show('text')
-        {0.0} <music21.note.Rest rest>
-        {2.0} <music21.note.Rest rest>
-        {2.5} <music21.note.Rest rest>
-        {2.625} <music21.note.Note C>
-        >>> b[0].duration.quarterLength
-        2.0
-        >>> b[1].duration.quarterLength
-        0.5
-        >>> b[2].duration.quarterLength
-        0.125
         
     Same thing, but this time, with gaps...
     
@@ -779,19 +757,11 @@ def makeRests(s, refStreamOrTimeRange=None, fillGaps=False,
         # create rest from start to end
         qLen = oLow - oLowTarget
         if qLen > 0:
-            if splitDurationComponents:
-                offset = oLowTarget
-                for component in duration.Duration(qLen).components:
-                    r = note.Rest()
-                    r.duration.quarterLength = component.quarterLength
-                    v._insertCore(offset, r)
-                    offset += r.duration.quarterLength
-            else :
-                r = note.Rest()
-                r.duration.quarterLength = qLen
-                #environLocal.printDebug(['makeRests(): add rests', r, r.duration])
-                # place at oLowTarget to reach to oLow
-                v._insertCore(oLowTarget, r)
+            r = note.Rest()
+            r.duration.quarterLength = qLen
+            #environLocal.printDebug(['makeRests(): add rests', r, r.duration])
+            # place at oLowTarget to reach to oLow
+            v._insertCore(oLowTarget, r)
 
         # create rest from end to highest
         qLen = oHighTarget - oHigh
