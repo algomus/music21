@@ -830,41 +830,6 @@ class TestCompareSchemas(unittest.TestCase):
         self.assertEqual((c.counts[TP], c.counts[FP], c.counts[FN]), (6, 0, 0))
 
 
-class TestSpeed(unittest.TestCase):
-    # python -munittest music21.schema.stats.TestSpeed._testAnalysisAvsB
-    POW = 10
-
-    def setUp(self):
-        from music21.schema import Label
-
-        self.score0 = music21.stream.Score()
-        a0 = music21.stream.Part()
-        self.score0.insert(0, a0)
-        a0.id = 'S'
-        for i in range(0, 2 ** self.POW):
-            a0.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
-
-        self.score1 = music21.stream.Score()
-        a1 = music21.stream.Part()
-        self.score1.insert(0, a1)
-        a1.id = 'S'
-        for i in range(0, 2 ** self.POW):
-            a1.insert(Label(offset=i, duration=4, kind='%d' % i, tag='a_oc1'))
-
-    def _testAnalysisAvsB(self):
-        from music21.schema import speed
-        speed.speed("Begin")
-        schemadiff = music21.schema.stats.SchemaDiff('testAnalysisAvsB')
-        speed.speed("SchemaDiff")
-        schemadiff.compareSchemas(self.score0, self.score1)
-        speed.speed("compareSchemas")
-        self.assertEqual((len(schemadiff.diff[TP].flat), len(schemadiff.diff[FP].flat), len(schemadiff.diff[FN].flat)), (2 ** self.POW, 0, 0))
-        speed.speed("assertEqual")
-        _getStats = schemadiff.getStatsByKind()
-        speed.speed("getStatsByKind")
-
-
-
 class TestMutualInformationSchema(unittest.TestCase):
     def setUp(self):
         from music21.schema import Label
