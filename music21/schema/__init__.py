@@ -370,11 +370,31 @@ class Label(Music21Object):
     def __repr__(self):
         return "<music21.schema.Label %s %s %s offset=%s duration=%s>" % (self.kind, self.tag, self.weight, self.offset, self.duration.quarterLength)
 
+
 # -----------------------------------------------------------------------------
-
 class Segmentation(music21.stream.Part):
+    '''
+    A Segmentation is a succession of consecutive Labels.
 
-    '''A Segmentation is a succession of consecutive Labels.'''
+    >>> seg = Segmentation([('A', 1), ('B', 5), ('A', 6.5)])
+    >>> seg.show('text')
+    {0.0} <music21.schema.Label segment-A A None offset=0.0 duration=1.0>
+    {1.0} <music21.schema.Label segment-B B None offset=1.0 duration=4.0>
+    {5.0} <music21.schema.Label segment-A A None offset=5.0 duration=1.5>
+
+    >>> seg = Segmentation([('A', 1), ('B', 5), ('A', 6.5)], secondElementIsDuration=True)
+    >>> seg.show('text')
+    {0.0} <music21.schema.Label segment-A A None offset=0.0 duration=1.0>
+    {1.0} <music21.schema.Label segment-B B None offset=1.0 duration=5.0>
+    {6.0} <music21.schema.Label segment-A A None offset=6.0 duration=6.5>
+
+    >>> seg = Segmentation(['A', 'B', 'A'], constantDuration=1.5)
+    >>> seg.show('text')
+    {0.0} <music21.schema.Label segment-A A None offset=0.0 duration=1.5>
+    {1.5} <music21.schema.Label segment-B B None offset=1.5 duration=1.5>
+    {3.0} <music21.schema.Label segment-A A None offset=3.0 duration=1.5>
+
+    '''
 
     def __init__(self, data, constantDuration=None, secondElementIsDuration=False):
         music21.stream.Part.__init__(self)
@@ -393,10 +413,9 @@ class Segmentation(music21.stream.Part):
             current_offset += dur
 
 
-
 # -----------------------------------------------------------------------------
 
-class Test(unittest.TestCase):
+class TestLabel(unittest.TestCase):
 
     def setUp(self):
         self.label = Label(offset=1, duration=4, kind="kind", tag="tag")
@@ -504,5 +523,7 @@ class Test(unittest.TestCase):
         self.assertNotEqual(self.label, self.labelTest)
 
 
+# -----------------------------------------------------------------------------
+
 if __name__ == '__main__':
-    music21.mainTest(Test)
+    music21.mainTest(TestLabel)
