@@ -117,7 +117,7 @@ class LilypondConverter(object):
     '''.lstrip()
     schemaBoxHeader = r'''
     \include "frameEngraver-box.ly"
-    '''.lstrip()
+    '''.lstrip() # TODO: to put as a parameter/attribute of LilypondConverter?
     
 
     accidentalConvert = {"double-sharp": u"isis",
@@ -241,6 +241,7 @@ class LilypondConverter(object):
         >>> print(lily.translate.LilypondConverter().textFromMusic21Object(n))
         \version "2..."
         \include "lilypond-book-preamble.ly"
+        \include "frameEngraver-box.ly"
         color = #(define-music-function (parser location color) (string?) #{
                 \once \override NoteHead #'color = #(x11-color $color)
                 \once \override Stem #'color = #(x11-color $color)
