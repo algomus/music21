@@ -208,6 +208,9 @@ class Style(object):
         Traceback (most recent call last):
         ...
         AttributeError: 'bar' not defined in /default
+        >>> defaultStyle.bar = 'foo'
+        >>> defaultStyle.bar
+        'foo'
 
         >>> boxStyle = style.Style('other', { 'color': Color(255, 0, 0), 'opacity': 0.5}, parent=defaultStyle)
         >>> print(boxStyle)
