@@ -256,6 +256,19 @@ class LilypondConverter(object):
           }
         \paper { }
         ...
+        >>> score = stream.Score()
+        >>> score.insert(n)
+        >>> print(lily.translate.LilypondConverter().textFromMusic21Object(score, True))
+        \version "2..." 
+        \include "frameEngraver-box.ly"
+        ...
+        \score  { 
+         \new Voice { c' 4  
+                 }
+         \midi { } \layout {
+            ...
+           }
+          }
         '''
         self.loadFromMusic21Object(m21ObjectIn, withMidiOut)
         s = str(self.topLevelObject)
