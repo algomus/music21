@@ -485,6 +485,7 @@ class TestLabel(unittest.TestCase):
 
     def testEq(self):
         self.assertEqual(self.label, self.labelTest)
+        self.assertFalse(self.label is self.labelTest)
 
     def testEqOther(self):
         self.assertNotEqual(self.label, music21.duration.Duration(5))
@@ -534,13 +535,21 @@ class TestLabel(unittest.TestCase):
         self.assertNotEqual(self.label, self.labelTest)
 
     def testList(self):
+        # self.label     = Label(offset=1, duration=4, kind="kind", tag="tag")
+        # self.labelTest = Label(offset=1, duration=4, kind="kind", tag="tag")
         labelTest0 = Label(offset=0, duration=None, kind="kind", tag="tag")
         labelTest2 = Label(offset=2, duration=music21.duration.Duration(5), kind="kind", tag="tag")
+        labelTest3 = Label(offset=2, duration=music21.duration.Duration(7), kind="kind", tag="tag")
         labelList = [labelTest0, self.label, labelTest2]
 
         self.assertTrue(self.label in labelList)
         self.assertTrue(self.labelTest in labelList)
         self.assertTrue(labelTest2 in labelList)
+
+        self.assertFalse(labelTest3 in labelList)
+        labelTest3.duration = music21.duration.Duration(5)  # labelTest2 == labelTest3
+        self.assertTrue(labelTest3 in labelList)
+        self.assertEqual(labelTest3, labelTest2)
 
         labelList.remove(self.labelTest)
         self.assertFalse(self.label in labelList)
