@@ -683,7 +683,40 @@ class Converter(object):
         '''
         if self.makeNotation is not False:
             self.stream.makeMeasures(inPlace=True)
-        
+            
+class TinyNotationWriter(object):
+    def _durationToTinyNotation(self, dur):
+        (qLen, durType, dots, tupleNumerator, tupletDenominator, tupletType) = duration.unitSpec(dur)
+        numberType = duration.convertTypeToNumber(durType)
+
+        return '%d' % numberType + '.' * dots
+
+
+    def _noteToTinyNotation(self, noteObj):
+        if noteObj.octave <= 3:
+            return noteObj.name[0] * (4 - noteObj.octave) + noteObj.name[1:]
+        else:
+            name = noteObj.name.lower()
+            return name[0] + "'" * (noteObj.octave - 4) + name[1:]
+
+    def streamToTinyNotation(self, streamObj):
+        l = []
+        for elem in streamObj.flat:
+            if isinstance(elem, note.Note):
+                s = self._noteToTinyNotation(elem)
+                d = self._durationToTinyNotation(elem.duration)
+                l.append(s + d)
+            elif isinstance(elem, note.Rest):
+                s = 'r'
+                d = self._durationToTinyNotation(elem.duration)
+                l.append(s + d)
+            elif isinstance(elem, meter.TimeSignature):
+                s = elem.ratioString
+                l.append(s)
+
+        return ' '.join(l)
+
+      
 class Test(unittest.TestCase):
     parseTest = "1/4 trip{C8~ C~_hello C=mine} F~ F~ 2/8 F F# quad{g--16 a## FF(n) g#} g16 F0"
     
@@ -707,6 +740,14 @@ class Test(unittest.TestCase):
         self.assertEqual(sfn[9].editorial.ficta.alter, 0)
         self.assertEqual(sfn[12].duration.quarterLength, 1.0)
         self.assertEqual(sfn[12].expressions[0].classes, expressions.Fermata().classes)
+
+    def testTinyNotationWriter(self):
+        text = "3/4 d8 e4 F2 g'8 AA8 b''16"
+        c = Converter(text)
+        c.parse()
+        s = c.stream
+        text2 = TinyNotationWriter().streamToTinyNotation(s)
+        self.assertEqual(text, text2)
 
 class TestExternal(unittest.TestCase):
     def runTest(self):
