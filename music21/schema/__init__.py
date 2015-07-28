@@ -11,6 +11,7 @@
 # Copyright:    Copyright © 2013-2015 Michael Scott Cuthbert and the music21 Project
 # License:      LGPL, see license.txt
 # ------------------------------------------------------------------------------
+from music21 import tinyNotation
 '''
 An analysis schema is a :class:`~music21.stream.Score` containing analysis labels
 (:class:`~music21.schema.Label`) organized into several :class:`~music21.stream.Part`.
@@ -306,7 +307,7 @@ class Label(Music21Object):
             {3.0} <music21.note.Note A>
         ...
         >>> label = Label(offset=11, duration=8)
-        >>> label.activeSite = p
+        >>> p.insert(label)
         >>> extract = label.extractPattern()
         >>> extract.show('text')
         {0.0} <music21.clef.TrebleClef>
@@ -377,7 +378,7 @@ class Test(unittest.TestCase):
         self.vs = music21.stream.Part()
         self.vs.insert(0, music21.converter.parse('tinyNotation: 4/4 c4 d e c  c d e c   e f g2   e4 f g2  g8 a g f e4 c   g8 a g f e4 c  c4 g c2  c4 g c2'))
         self.vs.makeMeasures(inPlace=True)
-        self.label.activeSite = self.vs
+        self.vs.insert(self.label)
 
     def testInit(self):
         labelTest2 = Label(offset=2, duration=None, kind="kind", tag="tag")
@@ -419,9 +420,10 @@ class Test(unittest.TestCase):
 
     def testExtractPattern(self):
         labelA = Label(offset=3, duration=6)
-        labelA.activeSite = self.vs
+        self.vs.insert(labelA)
 
         pattern = labelA.extractPattern()
+        tw = tinyNotation.TinyNotationWriter()
         self.assertEqual(len(pattern.flat.getElementsByClass(GeneralNote)), 8)
 
     def testEq(self):
