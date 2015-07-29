@@ -11,6 +11,7 @@
 # Copyright:    Copyright © 2013-2015 Michael Scott Cuthbert and the music21 Project
 # License:      LGPL, see license.txt
 # ------------------------------------------------------------------------------
+from music21.note import Note
 '''
 This modules provides a .svg output for a score with an analysis schema
 (:class:`~music21.stream.Score` containing :class:`~music21.schema.Label`).
@@ -127,6 +128,26 @@ class SvgWriter(object):
 class SvgLabel(object):
     '''
     Base class of a drawed Label.
+    
+    >>> from music21.schema import Label
+    >>> from music21.schema.style import StyleSheet
+    >>> from music21.schema.svg import SvgLabel
+    >>> style = StyleSheet()
+    >>> style.addStyle('test', {'lineNameWidth': 10.0})
+    >>> label = Label(offset=10.0, duration=20.0, kind='test')
+    >>> svglabel = SvgLabel(label,style)
+    >>> svglabel.start(1)
+    20.0
+    >>> svglabel.middle(1)
+    30.0
+    >>> svglabel.end(1)
+    40.0
+    >>> svglabel.width(1)
+    20.0
+    >>> number = svglabel.number
+    >>> svglabel2 = SvgLabel(label,style)
+    >>> svglabel2.number == number + 1
+    True
     '''
 
     _last = 0
@@ -928,6 +949,128 @@ class TestSvgSchema(unittest.TestCase):
                                          '</text>' +
                                      '</g>' +
                                  '</g>')
+
+    def testSvgSchemaSchouldContainOneLabel(self):
+        label = music21.schema.Label(kind='test')
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('test', {})
+        score = music21.stream.Score()
+        score.id = "myscore"
+        part = music21.stream.Part()
+        part.insert(label)
+        score.insert(part)
+        schema = SvgSchema(score, style)
+        self.assertRegexpMatches(schema.render().render(),
+                                 '<g class="schema" id="myscore" transform="translate.*">' +
+                                     '<g >' +
+                                         '<rect fill="#f0f0f0" height="[0-9]+" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
+                                         '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="[0-9]+">' +
+                                             'myscore' +
+                                         '</text>\n' +
+                                         '<g class="label" id="label[0-9]+"><text dy="4.2" fill="#000000" font-family="Helvetica" font-size="12" x="45.0" y="36">test</text></g>' +
+                                     '</g>' +
+                                 '</g>'
+        )
+        
+    def testSvgSchemaShouldContainAFlexibleGraduation(self):
+        notes = 'tinyNotation: 4/4 a b c d e f g a'
+        score = music21.stream.Score()
+        score.id = "myscore"
+        part = music21.stream.Part(music21.converter.parse(notes).makeMeasures())
+        score.insert(0, part)
+        schema = SvgSchema(score, music21.schema.style.StyleSheet())
+        self.assertEqual(schema.render().render(),
+                         '<g class="schema" id="myscore" transform="translate(0,0)">' +
+                            '<g >' +
+                                '<rect fill="#f0f0f0" height="46" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
+                                '<g >' +
+                                    '<line style="stroke:#808080;stroke-width:2" x1="40.0" x2="40.0" y1="23" y2="43"/>\n' +
+                                    '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="40.0" y="15">1</text>' +
+                                '</g>\n' +
+                                '<g >' +
+                                    '<line style="stroke:#808080;stroke-width:2" x1="403.636363636" x2="403.636363636" y1="23" y2="43"/>\n' +
+                                    '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="403.636363636" y="15">2</text>' +
+                                '</g>\n' +
+                                '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate(-90 10 33)" x="10" y="33">myscore</text>' +
+                            '</g>' +
+                        '</g>')
+
+    def testGlobalBox(self):
+        svgWriter = SvgWriter()
+        label = music21.schema.Label(offset=10.0,duration=10.0,kind='global')
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('global', {'svg': GlobalBox})
+        globalBox = GlobalBox(label,style)
+        globalBox.render(svgWriter, 1, 0, 10)
+        self.assertRegexpMatches(svgWriter.render(),
+                         '<g >' +
+                            '<g >' +
+                                '<rect fill="#808080" height="10" opacity="1.0" width="10.0" x="50.0" y="0"/>\n' +
+                                '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="55.0" y="22">global</text>'
+                            '</g>' +
+                        '</g>')
+
+    def testVerticalLine(self):
+        svgWriter = SvgWriter()
+        label = music21.schema.Label(offset=10.0,duration=10.0,kind='vertical')
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('vertical', {'svg': VerticalLine})
+        cadence = VerticalLine(label,style)
+        cadence.render(svgWriter, 1, 0, 10)
+        self.assertRegexpMatches(svgWriter.render(),
+                         '<g >' +
+                            '<g >' +
+                                '<rect fill="#808080" height="10" opacity="1.0" ry="3" width="4" x="48.0" y="0"/>\n' +
+                                '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="50.0" y="22">vertical</text>' +
+                            '</g>' +
+                        '</g>')
+        
+    def testTriangle(self):
+        svgWriter = SvgWriter()
+        label = music21.schema.Label(offset=10.0,duration=10.0,kind='triangle')
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('triangle', {'svg': Triangle})
+        triangle = Triangle(label,style)
+        triangle.render(svgWriter, 1, 0, 10)
+        self.assertRegexpMatches(svgWriter.render(),
+                         '<g >' +
+                            '<g >' +
+                                '<polygon fill="#808080" points="50.00,12.00 45.00,20.00 55.00,20.00"/>\n' +
+                                '<text dy="4.2" font-family="Helvetica" font-size="12.0" style="fill:#808080" text-anchor="middle" x="50.0" y="26.0">triangle</text>' +
+                            '</g>' +
+                        '</g>')
+        
+    def testGraduations (self):
+        svgWriter = SvgWriter()
+        style = music21.schema.style.StyleSheet()
+        graduation = Graduations(10, 1, style)
+        graduation.render(svgWriter, 1, 0,10)
+        self.assertEqual(svgWriter.render(),
+                         '<g >' +
+                            '<g >' +
+                                '<line style="stroke:#808080;stroke-width:2" x1="44" x2="44" y1="0" y2="10"/>\n' +
+                                '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="44" y="-8">1</text>' +
+                            '</g>\n' +
+                            '<g >' +
+                                '<line style="stroke:#808080;stroke-width:2" x1="48" x2="48" y1="0" y2="10"/>\n' +
+                                '<text font-family="Helvetica" font-size="12" style="fill:#808080" text-anchor="middle" x="48" y="-8">2</text>' +
+                            '</g>' +
+                        '</g>')
+
+    def testTriangleShouldBeDownAndTop(self):
+        svgWriter = SvgWriter()
+        label = music21.schema.Label(offset=10.0,duration=10.0,kind='triangle')
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('triangle', {'svg': Triangle, 'trianglePosition': 'top', 'triangleDirection': 'down'})
+        triangle = Triangle(label,style)
+        triangle.render(svgWriter, 1, 0, 10)
+        self.assertRegexpMatches(svgWriter.render(),
+                         '<g >' +
+                            '<g >' +
+                                '<polygon fill="#808080" points="50.00,-2.00 45.00,-10.00 55.00,-10.00"/>\n' +
+                                '<text dy="4.2" font-family="Helvetica" font-size="12.0" style="fill:#808080" text-anchor="middle" x="50.0" y="-16.0">triangle</text>' +
+                            '</g>' +
+                        '</g>')
 
 
 class TestSvgSchemaSet(unittest.TestCase):
