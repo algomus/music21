@@ -53,6 +53,7 @@ class LilySchema(object):
 
     A subset of the labels `filterFunction` can be selected, such as in:
     filterFunction = (lambda label: label.kind in ['bli', 'bla'])
+    
     '''
 
     DOC_ATTR = {
@@ -130,15 +131,40 @@ class LilySchema(object):
 
 
 # -----------------------------------------------------------------------------
+import music21.stream
+import music21.schema.style
+
+
 class Test(unittest.TestCase):
 
-    def setUp(self):
-        pass
+    def setUp (self):
+        score = music21.stream.Score()
+        notes = 'tinyNotation: 4/4 a b c d e f g a b c d e f g'
+        part = music21.stream.Part(music21.converter.parse(notes).makeMeasures())
+        label = music21.schema.Label(kind='test',offset=1,duration=2)
+        mark  = music21.schema.Label(kind='test',offset=6,duration=0)
+        part.insert(label)
+        part.insert(mark)
+        score.insert(part)
+        style = music21.schema.style.StyleSheet()
+        style.addStyle('test', {})
+        self.lilyschema = LilySchema(score, style)
+        
+    def testLilySchemaShouldContainABoxStart (self):
+        self.assertIsInstance(self.lilyschema.score.parts[0][0][3], BoxStart)
+
+    def testLilySchemaShouldContainABoxEnd (self):
+        self.assertIsInstance(self.lilyschema.score.parts[0][0][6], BoxEnd)
+        
+    def testLilySchemaShouldContainAMark (self):
+        self.assertIsInstance(self.lilyschema.score.parts[0][2][3], Mark)
 
 # -----------------------------------------------------------------------------
 _DOC_ORDER = [LilySchema, BoxStart, BoxEnd, Mark]
 
 # -----------------------------------------------------------------------------
+
+import music21
+
 if __name__ == "__main__":
-    import music21
     music21.mainTest(Test)
