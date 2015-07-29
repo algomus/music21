@@ -11,6 +11,8 @@
 # Copyright:    Copyright © 2013-2015 Michael Scott Cuthbert and the music21 Project
 # License:      LGPL, see license.txt
 # ------------------------------------------------------------------------------
+from music21.stream import Score, Part
+from music21.schema.style import StyleSheet
 
 '''
 This module provides a web output for a score with an analysis schema
@@ -194,6 +196,9 @@ COMPLETE_WEBPAGE = '''
 
 
 class WebSchemaSet(object):
+    '''
+    doc
+    '''
     def __init__(self, scoreOrListOfScores, styleSheet, name=None, withScore=True):
         self._withScore = withScore
         self._svgSchemas = []
@@ -290,3 +295,37 @@ class WebSchemaSet(object):
         environLocal.printDebug([self.name, filename])
         with open(filename, 'w') as fd:
             fd.write(self.render())
+
+import unittest
+
+class Test(unittest.TestCase):
+    
+    def testShouldHaveOnlyOneSchemaDiv (self):
+        score = Score()
+        score.id = "myscore"
+        part = Part()
+        score.insert(part)
+        style = StyleSheet()
+        webschema = WebSchemaSet(score, style)
+        self.assertRegexpMatches(webschema.render(),
+                                 '.*' +
+                                '<div class="webSchemaSet" id="myscore">' +
+                                    '<div class="schemadiv visible-first" id="myscore0">' +
+                                        '<svg height="46" width="1040" xmlns="http://www.w3.org/2000/svg">' +
+                                            '<g class="schema" id="myscore" transform="translate.*">' +
+                                                '<g >' +
+                                                    '<rect fill="#f0f0f0" height="46" stroke="#cccccc" width="1040" x="0" y="0"/>\n' +
+                                                    '<text font-family="Helvetica" font-size="12" text-anchor="middle" transform="rotate.*" x="10" y="33">myscore</text>' +
+                                                '</g>' +
+                                            '</g>' +
+                                        '</svg>' +
+                                    '</div>' +
+                                '</div>' +
+                                '.*'
+        )
+
+
+import music21
+    
+if __name__ == '__main__':
+    music21.mainTest(Test)
