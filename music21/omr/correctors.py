@@ -122,8 +122,8 @@ class ScoreCorrector(object):
         try:
             ms = self.measureSlices[i]
             if ms == 0:
-                raise Exception("nope...")
-        except:
+                raise IndexError("nope...")
+        except IndexError:
             ms = MeasureSlice(self,i)
             if i >= len(self.measureSlices):
                 self.measureSlices.extend(0 for _ in range(len(self.measureSlices), i + 1))
@@ -308,7 +308,7 @@ class ScoreCorrector(object):
                     newEl.pitch.octave = oldPitch.octave
                     newEl.pitch.name = oldPitch.name
                     pitchIndex += 1
-            except:
+            except IndexError:
                 pass
             incorrectMeasure.append(newEl) 
                                
@@ -383,9 +383,10 @@ class ScoreCorrector(object):
         return PriorsIntegrationScore(totalFlagged, totalHorizontal, totalVertical, totalIgnored)
 
 class SinglePart(object):
-    def __init__(self, part = None, pn = None):
+    def __init__(self, part=None, pn=None):
         self.scorePart = part
         self.partNumber = pn
+        self.indexArray = None
         self.probabilityDistribution = None
         self.correctingMeasure = None
         if part is not None:
@@ -433,13 +434,15 @@ class SinglePart(object):
         []
         
         '''
+        from music21 import meter
         self.incorrectMeasures = []
         if runFast is True:
             try:
                 ts = self.measureStream[0].getContextByClass('TimeSignature')
-            except:
-                from music21 import meter
-                ts = meter.TimeSignature('4/4')       
+            except IndexError:
+                ts = meter.TimeSignature('4/4') 
+            if ts is None:
+                ts = meter.TimeSignature('4/4')
         for i in range(len(self.measureStream)):
             if runFast is False:
                 ts = self.measureStream[i].getContextByClass('TimeSignature')
@@ -844,9 +847,9 @@ class MeasureHash(object):
         
         Example of Violin II vs. Viola and Cello in K525 I, m. 17
         
-        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').notesAndRests
-        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').notesAndRests
-        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').notesAndRests
+        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').flat.notesAndRests
+        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').flat.notesAndRests
+        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').flat.notesAndRests
         >>> vlnIIMH = omr.correctors.MeasureHash(vlnII)
         >>> violaMH = omr.correctors.MeasureHash(viola)
         >>> celloMH = omr.correctors.MeasureHash(cello)
@@ -874,9 +877,9 @@ class MeasureHash(object):
         
         Example of Violin II vs. Viola and Cello in K525 I, m. 17
         
-        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').notesAndRests
-        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').notesAndRests
-        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').notesAndRests
+        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').flat.notesAndRests
+        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').flat.notesAndRests
+        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').flat.notesAndRests
         >>> vlnIIMH = omr.correctors.MeasureHash(vlnII)
         >>> violaMH = omr.correctors.MeasureHash(viola)
         >>> celloMH = omr.correctors.MeasureHash(cello)
@@ -934,9 +937,9 @@ class MeasureHash(object):
                 
         Example of Violin II vs. Viola and Cello in K525 I, m. 17
         
-        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').notesAndRests
-        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').notesAndRests
-        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').notesAndRests
+        >>> vlnII = converter.parse('tinynotation: 4/4 e4 e8. e8 c4 c8 c8').flat.notesAndRests
+        >>> viola = converter.parse('tinynotation: 4/4 c4 c8  c8 A4 A8 A8').flat.notesAndRests
+        >>> cello = converter.parse('tinynotation: 4/4 C4 C4     D4 D4   ').flat.notesAndRests
         >>> vlnIIMH = omr.correctors.MeasureHash(vlnII)
         >>> violaMH = omr.correctors.MeasureHash(viola)
         >>> celloMH = omr.correctors.MeasureHash(cello)
@@ -1010,11 +1013,12 @@ class MeasureHash(object):
         Destination is in set F of flagged measures. 
         
         (Rossant & Bloch)
-        value change: 50.77% of all errors (inverse: .0197)
-        confusions: 9.23% of all errors (inverse: .108)
+        
+        * value change: 50.77% of all errors (inverse: .0197)
+        * confusions: 9.23% of all errors (inverse: .108)
             Note: these get the most probability, because they are the rarest
-        omission: 27.69% of all errors (inverse: .0361)
-        addition: 12.31% of all errors (inverse: .08125)
+        * omission: 27.69% of all errors (inverse: .0361)
+        * addition: 12.31% of all errors (inverse: .08125)
         
         >>> mh = omr.correctors.MeasureHash()
         

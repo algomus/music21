@@ -2300,8 +2300,8 @@ SCREF = {(1, 1,    0)     : {"name":("unison", "monad","singleton")},
 (6, 15, -1)    : {"name":("combinatorial I (I5)",)},    
 (6, 16,  1)    : {"name":("combinatorial I (I3)",)},    
 (6, 16, -1)    : {"name":("combinatorial I (I1)", "quasi raga Megha")},   
-(6, 17,  1)    : {},  
-(6, 17, -1)    : {},  
+(6, 17,  1)    : {"name":("all tri-chord hexachord",)},  
+(6, 17, -1)    : {"name":("all tri-chord hexachord (inverted form)",)},  
 (6, 18,  1)    : {"name":("combinatorial I (I11)",)}, 
 (6, 18, -1)    : {"name":("combinatorial I (I5)",)},    
 (6, 19,  1)    : {},  
@@ -2342,8 +2342,8 @@ SCREF = {(1, 1,    0)     : {"name":("unison", "monad","singleton")},
 (6, 41,  1)    : {},  
 (6, 41, -1)    : {},  
 (6, 42,  0)    : {"name":("combinatorial RI (RI3)",)},     
-(6, 43,  1)    : {},  
-(6, 43, -1)    : {},  
+(6, 43,  1)    : {"name":("complement of all tri-chord hexachord",)},  
+(6, 43, -1)    : {"name":("complement of all-tri-chord hexachord (inverted form)",)},  
 (6, 44,  1)    : {"name":("Schoenberg Anagram hexachord",)},   
 (6, 44, -1)    : {"name":("quasi raga Bauli",)},   
 (6, 45,  0)    : {"name":("combinatorial RI (RI6)",)},     
@@ -2758,7 +2758,8 @@ class Test(unittest.TestCase):
 
     def testForte(self):
         for setSize, setCount in TNIMAX.items(): # look at tni structures
-            if setSize == 0: continue
+            if setSize == 0: 
+                continue
             for i in range(1, setCount+1):
                 self.assertEqual(len(FORTE[setSize][1]), 4)
             # must subtract one b/c all groups contain a zero set to pad

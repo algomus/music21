@@ -225,14 +225,16 @@ def convertSpecifier(specifier):
         # between m and M, but was taken care of in the line above
         elif specifier.lower() in [x.lower() for x in prefixSpecs[1:]]:    
             for i in range(len(prefixSpecs)):
-                if prefixSpecs[i] == None: continue
+                if prefixSpecs[i] == None: 
+                    continue
                 if specifier.lower() == prefixSpecs[i].lower():
                     post = i
                     break
 
         elif specifier.lower() in [x.lower() for x in niceSpecNames[1:]]:    
             for i in range(len(niceSpecNames)):
-                if niceSpecNames[i] == None: continue
+                if niceSpecNames[i] == None: 
+                    continue
                 if specifier.lower() == niceSpecNames[i].lower():
                     post = i
                     break
@@ -1958,8 +1960,7 @@ class Interval(base.Music21Object):
                 halfStepsToFix = halfStepsToFix - 12
                 pitch2.octave = pitch2.octave - 1
 
-            # this will raise an exception if greater than 4            
-            # TODO: possibly set as an option if accidentals permit 
+            # this will raise an exception if greater than 4        
             if (maxAccidental is not None and abs(halfStepsToFix) >   
                 maxAccidental):
                 # just create new pitch, directly setting the pitch space value
@@ -2173,9 +2174,12 @@ def getAbsoluteHigherNote(note1, note2):
     '''
     chromatic = notesToChromatic(note1, note2)
     semitones = chromatic.semitones
-    if semitones > 0: return note2
-    elif semitones < 0: return note1
-    else: return note1
+    if semitones > 0: 
+        return note2
+    elif semitones < 0: 
+        return note1
+    else: 
+        return note1
 
 def getWrittenLowerNote(note1, note2):
     '''
@@ -2197,9 +2201,12 @@ def getWrittenLowerNote(note1, note2):
     '''
     num1 = note1.diatonicNoteNum
     num2 = note2.diatonicNoteNum
-    if num1 < num2: return note1
-    elif num1 > num2: return note2
-    else: return getAbsoluteLowerNote(note1, note2)
+    if num1 < num2: 
+        return note1
+    elif num1 > num2: 
+        return note2
+    else: 
+        return getAbsoluteLowerNote(note1, note2)
 
 def getAbsoluteLowerNote(note1, note2):
     '''
@@ -2215,9 +2222,12 @@ def getAbsoluteLowerNote(note1, note2):
     '''
     chromatic = notesToChromatic(note1, note2)
     semitones = chromatic.semitones
-    if semitones > 0: return note1
-    elif semitones < 0: return note2
-    else: return note1
+    if semitones > 0: 
+        return note1
+    elif semitones < 0: 
+        return note2
+    else: 
+        return note1
 
 def transposePitch(pitch1, interval1):
     '''

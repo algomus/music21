@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-The music21 Framework is Copyright © 2008-2013 Michael Scott Cuthbert 
+The music21 Framework is Copyright © 2006-2015 Michael Scott Cuthbert 
 and the music21 Project
 
 (Michael Scott Cuthbert, principal investigator; cuthbert@mit.edu)
@@ -79,6 +79,7 @@ __all__ = [
     'search',
     'test',
     'theoryAnalysis',
+    'timespans',
     'trecento',
     'vexflow',
     'webapps', 
@@ -152,6 +153,7 @@ __all__ = [
 from music21 import base
 from music21.base import VERSION
 from music21.base import VERSION_STR
+from music21.base import VERSION_STR as __version__
 from music21.base import Music21Exception
 from music21.base import SitesException
 from music21.base import Music21ObjectException

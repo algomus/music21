@@ -1435,7 +1435,6 @@ def mxFermataToFermata(mxFermata, inputM21 = None):
     and returns it.  Otherwise changes the current Fermata
     object and returns nothing.
     
-    
     >>> mxFermata = musicxml.mxObjects.Fermata()
     >>> mxFermata.set('type', 'inverted')
     >>> fermata = musicxml.fromMxObjects.mxFermataToFermata(mxFermata)
@@ -1764,6 +1763,48 @@ def mxToNote(mxNote, spannerBundle=None, inputM21=None):
         n = note.Note()
     else:
         n = inputM21
+        
+    mxToPitch(mxNote, n.pitch) # required info will be taken from entire note
+
+    beamsObj = mxToBeams(mxNote.beamList)
+    n.beams = beamsObj 
+
+    mxStem = mxNote.get('stem')
+    if mxStem is not None:
+        n.stemDirection = mxStem
+
+    # gets the notehead object from the mxNote and sets value of the music21 note 
+    # to the value of the notehead object        
+    mxNotehead = mxNote.get('noteheadObj')
+    if mxNotehead is not None:
+        if mxNotehead.charData not in ['', None]:
+            n.notehead = mxNotehead.charData
+        if mxNotehead.get('color') is not None:
+            n.color = mxNotehead.get('color')
+
+
+    # after this, use combined function for notes and rests...
+    return mxNoteToGeneralNoteHelper(n, mxNote, spannerBundle)
+
+def mxToRest(mxNote, inputM21=None, spannerBundle=None):
+    '''Translate a MusicXML :class:`~music21.musicxml.mxObjects.Note` object to a :class:`~music21.note.Rest`.
+
+    If an `inputM21` object reference is provided, this object will be configured; otherwise, a new :class:`~music21.note.Rest` object is created and returned.
+    '''
+    if inputM21 == None:
+        r = note.Rest()
+    else:
+        r = inputM21
+
+    return mxNoteToGeneralNoteHelper(r, mxNote, spannerBundle)
+
+
+def mxNoteToGeneralNoteHelper(n, mxNote, spannerBundle=None):
+    '''
+    helper function for things common to notes and rests.
+    
+    n can be a note or rest...
+    '''    
     # doing this will create an instance, but will not be passed
     # out of this method, and thus is only for testing
     if spannerBundle is None:
@@ -1782,8 +1823,6 @@ def mxToNote(mxNote, spannerBundle=None, inputM21=None):
 
     mxGrace = mxNote.get('graceObj')
 
-    mxToPitch(mxNote, n.pitch) # required info will be taken from entire note
-
     if mxGrace is not None:
         #environLocal.printDebug(['mxGrace', mxGrace, mxNote, n.duration])
         # in some casses grace notes may not have an assigned duration type
@@ -1794,12 +1833,6 @@ def mxToNote(mxNote, spannerBundle=None, inputM21=None):
 
     # the n.duration object here will be configured based on mxNote
     mxToDuration(mxNote, n.duration)
-    beamsObj = mxToBeams(mxNote.beamList)
-    n.beams = beamsObj 
-
-    mxStem = mxNote.get('stem')
-    if mxStem is not None:
-        n.stemDirection = mxStem
 
     # get color from Note first; if not, try to get from notehead
     if mxNote.get('color') is not None:
@@ -1855,39 +1888,12 @@ def mxToNote(mxNote, spannerBundle=None, inputM21=None):
         # create spanners:
         mxNotationsToSpanners(n, mxNotations, spannerBundle)
 
-    # gets the notehead object from the mxNote and sets value of the music21 note to the value of the notehead object        
-    mxNotehead = mxNote.get('noteheadObj')
-    if mxNotehead is not None:
-        if mxNotehead.charData not in ['', None]:
-            n.notehead = mxNotehead.charData
-        if mxNotehead.get('color') is not None:
-            n.color = mxNotehead.get('color')
-
     # translate if necessary, otherwise leaves unchanged
     n = mxGraceToGrace(n, mxGrace)
     return n
 
 
-def mxToRest(mxNote, inputM21=None):
-    '''Translate a MusicXML :class:`~music21.musicxml.mxObjects.Note` object to a :class:`~music21.note.Rest`.
 
-    If an `inputM21` object reference is provided, this object will be configured; otherwise, a new :class:`~music21.note.Rest` object is created and returned.
-    '''
-    if inputM21 == None:
-        r = note.Rest()
-    else:
-        r = inputM21
-
-    try:
-        mxToDuration(mxNote, r.duration)
-    except duration.DurationException:
-        #environLocal.printDebug(['failed extaction of duration from musicxml', 'mxNote:', mxNote, r])
-        raise
-
-    if mxNote.get('color') is not None:
-        r.color = mxNote.get('color')
-
-    return r
 
 #------------------------------------------------------------------------------
 # Defaults
@@ -2496,6 +2502,11 @@ def mxToMeasure(mxMeasure, spannerBundle=None, inputM21=None, lastMeasureInfo=No
             addToStaffReference(mxObj, h, staffReference)
             m._insertCore(offsetMeasureNote, h)
 
+        elif isinstance(mxObj, mxObjects.Clef):
+            cl = mxClefToClef(mxObj)
+            addToStaffReference(mxObj, cl, staffReference)
+            m._insertCore(offsetMeasureNote, cl)
+
 
     #environLocal.printDebug(['staffReference', staffReference])
     # if we have voices and/or if we used backup/forward, we may have
@@ -2698,7 +2709,8 @@ def mxToStreamPart(mxScore, partId, spannerBundle=None, inputM21=None):
     # if we have multiple staves defined, add more parts, and transfer elements
     # note: this presently has to look at _idLastDeepCopyOf to get matches
     # to find removed elements after copying; this is probably not the
-    # best way to do this. 
+    # best way to do this.   # V2.1 -- is not/will not be doing this. in fact idLastDeepCopyOf is
+    # going away...
 
     # for this part, if any elements are components in the spannerBundle,
     # then then we need to update the spannerBundle after the part is copied
@@ -2771,13 +2783,13 @@ def separateOutPartStaffs(mxPart, streamPart, spannerBundle, s, staffReferenceLi
                 m = mStream[i]
                 for eRemove in staffExclude:
                     for eMeasure in m:
-                        if eMeasure._idLastDeepCopyOf == id(eRemove):
+                        if eMeasure.derivation.origin is eRemove and eMeasure.derivation.method == '__deepcopy__':
                             m.remove(eMeasure)
                             break
                     for v in m.voices:
                         v.remove(eRemove)
                         for eVoice in v.elements:
-                            if eVoice._idLastDeepCopyOf == id(eRemove):
+                            if eVoice.derivation.origin is eRemove and eVoice.derivation.method == '__deepcopy__':
                                 v.remove(eVoice)
             # after adjusting voices see if voices can be reduced or
             # removed
@@ -3898,8 +3910,9 @@ class Test(unittest.TestCase):
         from music21 import corpus
         # this is a good test as this encoding uses staffs, not parts
         # to encode both parts; this requires special spanner handling
-        s = corpus.parse('k545')
-        slurs = s.flat.getElementsByClass(spanner.Slur)
+        s = corpus.parse('mozart/k545/movement1_exposition')
+        sf = s.flat       
+        slurs = sf.getElementsByClass(spanner.Slur)
         # TODO: this value should be 2, but due to staff encoding we 
         # have orphaned spanners that are not cleaned up
         self.assertEqual(len(slurs), 4)

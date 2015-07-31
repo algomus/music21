@@ -15,7 +15,7 @@
 as well as component objects for defining nested metrical structures,
 :class:`~music21.meter.MeterTerminal` and :class:`~music21.meter.MeterSequence` objects.
 '''
-
+import collections
 import copy
 import fractions
 import re
@@ -55,16 +55,19 @@ _meterSequenceAccentArchetypes = {}
 # level dictionary
 _meterSequenceDivisionOptions = {}
 
+MeterTerminalTuple = collections.namedtuple('MeterTerminalTuple', 'numerator denominator tempoIndication')
 
-def slashToFraction(value):
+def slashToTuple(value):
     '''
+    Returns a three-element MeterTerminalTuple of numerator, denominator, and optional
+    tempo indication.
 
-    >>> meter.slashToFraction('3/8')
-    (3, 8, None)
-    >>> meter.slashToFraction('7/32')
-    (7, 32, None)
-    >>> meter.slashToFraction('slow 6/8')
-    (6, 8, 'slow')
+    >>> meter.slashToTuple('3/8')
+    MeterTerminalTuple(numerator=3, denominator=8, tempoIndication=None)    
+    >>> meter.slashToTuple('7/32')
+    MeterTerminalTuple(numerator=7, denominator=32, tempoIndication=None)    
+    >>> meter.slashToTuple('slow 6/8')
+    MeterTerminalTuple(numerator=6, denominator=8, tempoIndication='slow')
     '''
     tempoIndication = None
     # split by numbers, include slash
@@ -77,13 +80,13 @@ def slashToFraction(value):
     elif 'fast' in valueChars.lower():
         tempoIndication = 'fast'
 
-    matches = re.match("(\d+)\/(\d+)", valueNumbers)
+    matches = re.match(r"(\d+)\/(\d+)", valueNumbers)
     if matches is not None:
         n = int(matches.group(1))
         d = int(matches.group(2))
-        return n, d, tempoIndication
+        return MeterTerminalTuple(n, d, tempoIndication)
     else:
-        environLocal.printDebug(['slashToFraction() cannot find two part fraction', value])
+        environLocal.printDebug(['slashToTuple() cannot find two part fraction', value])
         return None
 
 
@@ -102,12 +105,11 @@ def slashCompoundToFraction(value):
     value = value.strip() # rem whitespace
     value = value.split('+')
     for part in value:
-        m = slashToFraction(part)
+        m = slashToTuple(part)
         if m is None:
             pass
         else:
-            n, d, unused_tempoIndication = m
-            post.append((n, d))
+            post.append((m.numerator, m.denominator))
     return post
 
 
@@ -115,7 +117,7 @@ def slashMixedToFraction(valueSrc):
     '''
     Given a mixture if possible meter fraction representations, return a list
     of pairs. If originally given as a summed numerator; break into separate
-    fractions.
+    fractions and return True as the second element of the tuple
 
     >>> meter.slashMixedToFraction('3/8+2/8')
     ([(3, 8), (2, 8)], False)
@@ -145,11 +147,10 @@ def slashMixedToFraction(valueSrc):
     value = value.split('+')
     for part in value:
         if '/' in part:
-            fraction = slashToFraction(part)
-            if fraction is None:
+            tup = slashToTuple(part)
+            if tup is None:
                 raise TimeSignatureException('cannot create time signature from:', valueSrc)
-            n, d, unused_tempoIndication = fraction
-            pre.append([n, d])
+            pre.append([tup.numerator, tup.denominator])
         else: # its just a numerator
             try:
                 pre.append([int(part), None])
@@ -219,7 +220,8 @@ def fractionToSlashMixed(fList):
 
 def fractionSum(fList):
     '''
-    Given a list of fractions represented as a list, find the sum
+    Given a list of fractions represented as a list, 
+    find the sum; does NOT reduce to lowest terms.
 
     >>> meter.fractionSum([(3,8), (5,8), (1,8)])
     (9, 8)
@@ -229,29 +231,35 @@ def fractionSum(fList):
     (5, 4)
     >>> meter.fractionSum([(1,13), (2,17)])
     (43, 221)
-
+    >>> meter.fractionSum([])
+    (0, 1)
+    
+    This method might seem like an easy place to optimize and simplify
+    by just doing a fractions.Fraction() sum (I tried!), but not reducing to lowest
+    terms is a feature of this method. 3/8 + 3/8 = 6/8, not 3/4:
+    
+    >>> meter.fractionSum([(3,8), (3,8)])
+    (6, 8)
     '''
     nList = []
     dList = []
-    nListUnique = []
     dListUnique = []
 
     for n,d in fList:
         nList.append(n)
-        if n not in nListUnique:
-            nListUnique.append(n)
         dList.append(d)
         if d not in dListUnique:
             dListUnique.append(d)
 
     if len(dListUnique) == 1:
         n = sum(nList)
-        d = dList[0]
+        d = dListUnique[0]
+        # Does not reduce to lowest terms...
         return (n, d)
     else: # there might be a better way to do this
         d = 1
         d = common.lcm(dListUnique)
-        # after finding d, multuple each numerator
+        # after finding d, multiply each numerator
         nShift = []
         for i in range(len(nList)):
             nSrc = nList[i]
@@ -294,7 +302,7 @@ def bestTimeSignature(meas):
 
     Note: this does not yet accommodate triplets.
 
-    >>> s = converter.parse('C4 D4 E8 F8', format='tinyNotation')
+    >>> s = converter.parse('tinynotation: C4 D4 E8 F8').flat.notes
     >>> m = stream.Measure()
     >>> for el in s:
     ...     m.insert(el.offset, el)
@@ -302,7 +310,7 @@ def bestTimeSignature(meas):
     >>> ts
     <music21.meter.TimeSignature 3/4>
 
-    >>> s2 = converter.parse('C8. D16 E8 F8. G16 A8', format='tinyNotation')
+    >>> s2 = converter.parse('tinynotation: C8. D16 E8 F8. G16 A8').flat.notes
     >>> m2 = stream.Measure()
     >>> for el in s2:
     ...     m2.insert(el.offset, el)
@@ -310,7 +318,7 @@ def bestTimeSignature(meas):
     >>> ts2
     <music21.meter.TimeSignature 6/8>
 
-    >>> s3 = converter.parse('C2 D2 E2', format='tinyNotation')
+    >>> s3 = converter.parse('C2 D2 E2', format='tinyNotation').flat.notes
     >>> m3 = stream.Measure()
     >>> for el in s3:
     ...     m3.insert(el.offset, el)
@@ -318,7 +326,7 @@ def bestTimeSignature(meas):
     >>> ts3
     <music21.meter.TimeSignature 3/2>
 
-    >>> s4 = converter.parse('C8. D16 E8 F8. G16 A8 C4. D4.', format='tinyNotation')
+    >>> s4 = converter.parse('C8. D16 E8 F8. G16 A8 C4. D4.', format='tinyNotation').flat.notes
     >>> m4 = stream.Measure()
     >>> for el in s4:
     ...     m4.insert(el.offset, el)
@@ -326,7 +334,7 @@ def bestTimeSignature(meas):
     >>> ts4
     <music21.meter.TimeSignature 12/8>
 
-    >>> s5 = converter.parse('C4 D2 E4 F2', format='tinyNotation')
+    >>> s5 = converter.parse('C4 D2 E4 F2', format='tinyNotation').flat.notes
     >>> m5 = stream.Measure()
     >>> for el in s5:
     ...     m5.insert(el.offset, el)
@@ -334,7 +342,7 @@ def bestTimeSignature(meas):
     >>> ts5
     <music21.meter.TimeSignature 6/4>
 
-    >>> s6 = converter.parse('C4 D16.', format='tinyNotation')
+    >>> s6 = converter.parse('C4 D16.', format='tinyNotation').flat.notes
     >>> m6 = stream.Measure()
     >>> for el in s6:
     ...     m6.insert(el.offset, el)
@@ -513,16 +521,16 @@ class MeterTerminal(SlottedObject):
         self._duration = None
         self._numerator = 0
         self._denominator = 1
+        self._weight = None
         self._overriddenDuration = None
 
         if slashNotation is not None:
             # assign directly to values, not properties, to avoid
             # calling _ratioChanged more than necessary
-            values = slashToFraction(slashNotation)
+            values = slashToTuple(slashNotation)
             if values is not None: # if failed to parse
-                n, d, unused_tempoIndication = values
-            self._numerator = n
-            self._denominator = d
+                self._numerator = values.numerator
+                self._denominator = values.denominator
         self._ratioChanged() # sets self._duration
 
         # this will call _setWeight property for data checking
@@ -602,7 +610,8 @@ class MeterTerminal(SlottedObject):
         >>> a.ratioEqual(d)
         True
         '''
-        if other is None: return False
+        if other is None: 
+            return False
         if (other.numerator == self.numerator and
             other.denominator == self.denominator):
             return True
@@ -2352,6 +2361,7 @@ class MeterSequence(MeterTerminal):
 
         qPos = 0
         match = []
+        i = None
         for i in range(len(self)):
             start = qPos
             end = qPos + self[i].duration.quarterLength
@@ -2366,7 +2376,7 @@ class MeterSequence(MeterTerminal):
                     break
             qPos += self[i].duration.quarterLength
 
-        if isinstance(self[i], MeterSequence): # recurse
+        if i is not None and isinstance(self[i], MeterSequence): # recurse
             # qLenPositin needs to be relative to this subidivison
             # start is our current position that this subdivision
             # starts at
@@ -2728,6 +2738,15 @@ class TimeSignature(base.Music21Object):
 
     def __init__(self, value='4/4', partitionRequest=None):
         base.Music21Object.__init__(self)
+        self._overriddenBarDuration = None
+        self.symbol = None
+        self.displaySequence = None
+        self.beatSequence = None
+        self.accentSequence = None
+        self.beamSequence = None
+        self.symbolizeDenominator = False
+        self.summedNumerator = False
+
         self.resetValues(value, partitionRequest)
 
     def resetValues(self, value='4/4', partitionRequest=None):
@@ -2791,7 +2810,8 @@ class TimeSignature(base.Music21Object):
     def ratioEqual(self, other):
         '''A basic form of comparison; does not determine if any internatl structures are equal; only outermost ratio.
         '''
-        if other is None: return False
+        if other is None: 
+            return False
         if (other.numerator == self.numerator and
             other.denominator == self.denominator):
             return True
@@ -2966,10 +2986,12 @@ class TimeSignature(base.Music21Object):
         self.displaySequence = MeterSequence(value)
         self.summedNumerator = self.displaySequence.summedNumerator
 
-        # get simple representation; presently, only slashToFraction
+        # get simple representation; presently, only slashToslashToTuple
         # supports the fast/slow indication
         if common.isStr(value):
-            unused_n, unused_d, tempoIndication = slashToFraction(value)
+            valTuplet = slashToTuple(value)
+            if valTuplet is not None:
+                tempoIndication = valTuplet.tempoIndication
         else:
             tempoIndication = None
 
@@ -3000,7 +3022,6 @@ class TimeSignature(base.Music21Object):
                 self._setDefaultAccentWeights(3) # set partitions based on beat
             except MeterException:
                 environLocal.printDebug(['cannot set default accents for:', self])
-                pass
 
     def loadRatio(self, numerator, denominator, partitionRequest=None):
         '''
@@ -3315,7 +3336,6 @@ class TimeSignature(base.Music21Object):
         >>> ts.beatDivisionCount
         Traceback (most recent call last):
         TimeSignatureException: cannot determine beat backgrond when each beat is not partitioned
-
         ''')
 
     def _getBeatDivisionCountName(self):
@@ -3613,17 +3633,17 @@ class TimeSignature(base.Music21Object):
                 # last beams was active, last beamNumber was active,
                 # and it was stopped or was a partial-left
                 elif (beamPrevious is not None and
-                    beamNumber in beamPrevious.getNumbers() and beamPrevious.getTypeByNumber(beamNumber) in ['stop', 'partial-left'] and
-                    beamNext is not None):
-                        beamType = 'start'
+                      beamNumber in beamPrevious.getNumbers() and beamPrevious.getTypeByNumber(beamNumber) in ['stop', 'partial-left'] and
+                      beamNext is not None):
+                    beamType = 'start'
 
 
                 # last note had beams but stopped, next note cannot be beamed to  was active, last beamNumber was active,
                 # and it was stopped or was a partial-left
                 elif (beamPrevious is not None and
-                    beamNumber in beamPrevious.getNumbers() and beamPrevious.getTypeByNumber(beamNumber) in ['stop', 'partial-left'] and
-                    beamNext is None):
-                        beamType = 'partial-left'  # will be deleted later in the script
+                      beamNumber in beamPrevious.getNumbers() and beamPrevious.getTypeByNumber(beamNumber) in ['stop', 'partial-left'] and
+                      beamNext is None):
+                    beamType = 'partial-left'  # will be deleted later in the script
 
 
 
@@ -3768,7 +3788,7 @@ class TimeSignature(base.Music21Object):
         [default] only the notes) in the `Stream` specified as streamIn.
 
 
-        >>> s = converter.parse('C4 D4 E8 F8', format='tinyNotation')
+        >>> s = converter.parse('C4 D4 E8 F8', format='tinyNotation').flat.notes
         >>> sixEight = meter.TimeSignature('6/8')
         >>> sixEight.averageBeatStrength(s)
         0.4375
@@ -4166,7 +4186,6 @@ class TestExternal(unittest.TestCase):
         a.show()
 
     def testBasic(self):
-        import music21
         from music21 import stream
         a = stream.Stream()
         for meterStrDenominator in [1,2,4,8,16,32]:
@@ -4179,7 +4198,6 @@ class TestExternal(unittest.TestCase):
         a.show()
 
     def testCompound(self):
-        import music21
         from music21 import stream
         import random
 
@@ -4192,16 +4210,15 @@ class TestExternal(unittest.TestCase):
             for j in range(1, random.choice([2,4])):
                 msg.append('%s/%s' % (random.choice(meterStrNumerator),
                                       random.choice(meterStrDenominator)))
-            ts = music21.meter.TimeSignature('+'.join(msg))
+            ts = TimeSignature('+'.join(msg))
             m = stream.Measure()
             m.timeSignature = ts
             a.insert(m.timeSignature.barDuration.quarterLength, m)
         a.show()
 
     def testMeterBeam(self):
-        import music21
         from music21 import stream, note
-        ts = music21.meter.TimeSignature('6/8', 2)
+        ts = TimeSignature('6/8', 2)
         b = [duration.Duration('16th')] * 12
         s = stream.Stream()
         s.insert(0, ts)
@@ -4265,8 +4282,6 @@ class Test(unittest.TestCase):
         self.assertNotEqual(c, d)
 
     def testGetBeams(self):
-        from music21 import duration
-
         a = TimeSignature('6/8')
         b = ([duration.Duration('16th')] * 4  +
              [duration.Duration('eighth')] * 1) * 2
@@ -4584,13 +4599,13 @@ class Test(unittest.TestCase):
         self.assertEqual(repr(beamList), '[None, None, None, <music21.beam.Beams <music21.beam.Beam 1/start>>, <music21.beam.Beams <music21.beam.Beam 1/stop>>, None]')
 
     def testMixedDurationBeams2(self):
-        from music21 import tinyNotation
-        bm = tinyNotation.TinyNotationStream('3/8 b8 c16 r e. d32')
+        from music21 import converter
+        bm = converter.parse('tinyNotation: 3/8 b8 c16 r e. d32').flat
         bm2 = bm.makeNotation()
         beamList = [n.beams for n in bm2.flat.notes]
         self.assertEqual(repr(beamList), '[<music21.beam.Beams <music21.beam.Beam 1/start>>, <music21.beam.Beams <music21.beam.Beam 1/stop>/<music21.beam.Beam 2/partial/left>>, <music21.beam.Beams <music21.beam.Beam 1/start>/<music21.beam.Beam 2/start>>, <music21.beam.Beams <music21.beam.Beam 1/stop>/<music21.beam.Beam 2/stop>/<music21.beam.Beam 3/partial/left>>]')
 
-        bm = tinyNotation.TinyNotationStream("2/4 b16 c' b a g f# g r")
+        bm = converter.parse("tinyNotation: 2/4 b16 c' b a g f# g r")
         bm2 = bm.makeNotation()
         beamList = [n.beams for n in bm2.flat.notes]
         beamListRepr = [str(i) + repr(beamList[i]) for i in range(len(beamList))]
@@ -4607,7 +4622,7 @@ class Test(unittest.TestCase):
 
     def testBestTimeSignature(self):
         from music21 import converter, stream
-        s6 = converter.parse('C4 D16.', format='tinyNotation')
+        s6 = converter.parse('C4 D16.', format='tinyNotation').flat.notes
         m6 = stream.Measure()
         for el in s6:
             m6.insert(el.offset, el)

@@ -10,8 +10,6 @@
 #               Project
 # License:      LGPL or BSD, see license.txt
 #------------------------------------------------------------------------------
-from __future__ import print_function
-
 '''
 The environment module describes an object for accessing and setting
 variables related to the user's music21 environment. Such variables include
@@ -21,7 +19,11 @@ and other settings.
 
 Additional documentation for and examples of using this module are found in
 :ref:`environment`.
+
+# TODO: Update to user's guide
 '''
+from __future__ import print_function
+
 import os
 import sys
 import tempfile
@@ -120,10 +122,9 @@ class LocalCorpusSettings(xmlnode.XMLNodeList):
     ### INITIALIZER ###
 
     def __init__(self, name=None):
-        xmlnode.XMLNode.__init__(self)
+        xmlnode.XMLNodeList.__init__(self)
         self._attr['name'] = name
         self._tag = 'localCorpusSettings'  # assumed for now
-        self.componentList = []  # list of LocalCorpusPath objects
 
     ### PRIVATE METHODS ###
 
@@ -165,9 +166,8 @@ class LocalCorporaSettings(xmlnode.XMLNodeList):
     ### INITIALIZER ###
 
     def __init__(self):
-        xmlnode.XMLNode.__init__(self)
+        xmlnode.XMLNodeList.__init__(self)
         self._tag = 'localCorporaSettings'
-        self.componentList = []
 
     ### PRIVATE METHODS ###
 
@@ -221,7 +221,8 @@ class SettingsHandler(xml.sax.ContentHandler):
 
     ### INITIALIZER ###
 
-    def __init__(self, tagLib=None):
+    def __init__(self):
+        xml.sax.ContentHandler.__init__(self)
         self._characters = ''
         self._objectStack = []
         self._settings = None
@@ -522,7 +523,7 @@ class _EnvironmentCore(object):
                 ('vectorPath', '/Applications/Preview.app'),
                 ('pdfPath', '/Applications/Preview.app'),
                 ('midiPath', '/Applications/QuickTime Player.app'),
-                ('musescoreDirectPNGPath', '/Applications/MuseScore.app/Contents/MacOS/mscore'),
+                ('musescoreDirectPNGPath', '/Applications/MuseScore 2.app/Contents/MacOS/mscore'),
                 ]:
                 self.__setitem__(name, value)  # use for key checking
 
@@ -775,7 +776,7 @@ class _EnvironmentCore(object):
 
                 webbrowser.open(filePath)
                 return
-            except:
+            except ImportError:
                 print('Cannot open webbrowser, sorry. Go to file://{}'.format(
                     filePath))
         if app is not None:
@@ -799,7 +800,7 @@ class _EnvironmentCore(object):
                     with open(filePath, 'r') as f:
                         for line in f:
                             print(line, end="")
-                        print
+                        print("")
                     return                    
                 else:
                     raise EnvironmentException(
@@ -1599,7 +1600,7 @@ class Test(unittest.TestCase):
   <localCorpusSettings/>
   <preference name="manualCoreCorpusPath"/>
   <preference name="midiPath" value="/Applications/QuickTime Player.app"/>
-  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore.app/Contents/MacOS/mscore"/>
+  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore 2.app/Contents/MacOS/mscore"/>
   <preference name="musicxmlPath" value="/Applications/Finale Notepad 2012.app"/>
   <preference name="pdfPath" value="/Applications/Preview.app"/>
   <preference name="showFormat" value="musicxml"/>
@@ -1645,7 +1646,7 @@ class Test(unittest.TestCase):
   </localCorpusSettings>
   <preference name="manualCoreCorpusPath"/>
   <preference name="midiPath" value="/Applications/QuickTime Player.app"/>
-  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore.app/Contents/MacOS/mscore"/>
+  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore 2.app/Contents/MacOS/mscore"/>
   <preference name="musicxmlPath" value="/Applications/Finale Notepad 2012.app"/>
   <preference name="pdfPath" value="/Applications/Preview.app"/>
   <preference name="showFormat" value="musicxml"/>
@@ -1696,7 +1697,7 @@ class Test(unittest.TestCase):
   </localCorpusSettings>
   <preference name="manualCoreCorpusPath"/>
   <preference name="midiPath" value="w"/>
-  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore.app/Contents/MacOS/mscore"/>
+  <preference name="musescoreDirectPNGPath" value="/Applications/MuseScore 2.app/Contents/MacOS/mscore"/>
   <preference name="musicxmlPath" value="/Applications/Finale Notepad 2012.app"/>
   <preference name="pdfPath" value="/Applications/Preview.app"/>
   <preference name="showFormat" value="musicxml"/>

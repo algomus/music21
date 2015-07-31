@@ -252,7 +252,10 @@ The example follows::
     ...                     partDict[noteLength] += 1
     ...                 else:
     ...                     partDict[noteLength] = 1
-    >>> quarterLengths = list(set(sopranoDict.keys()+altoDict.keys()+tenorDict.keys()+bassDict.keys()))
+    >>> quarterLengths = list(set(list(sopranoDict.keys())
+    ...                           + list(altoDict.keys())
+    ...                           + list(tenorDict.keys())
+    ...                           + list(bassDict.keys())))
     >>> for ql in quarterLengths:
     ...     values = []
     ...     for partDict in [sopranoDict, altoDict, tenorDict, bassDict]:     
@@ -301,7 +304,7 @@ A basic example follows::
     >>> data = {1:[], 2:[], 3:[]}
     >>> for i in range(len(data.keys())):
     ...    q = [(x, random.choice(range(10*(i+1)))) for x in range(20)]
-    ...    data[data.keys()[i]] = q
+    ...    data[list(data.keys())[i]] = q
     >>> a.setData(data) 
     >>> a.process()  # doctest: +SKIP
 

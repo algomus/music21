@@ -155,6 +155,8 @@ class LilypondConverter(object):
         self.coloredVariants = False
         self.variantMode = False
         self.LILYEXEC = None
+        self.tempName = None
+        self.inWord = None
         
 
     def findLilyExec(self):
@@ -181,19 +183,18 @@ class LilypondConverter(object):
 
     def setupTools(self):
         LILYEXEC = self.findLilyExec()
-        command = LILYEXEC + ' --version'
-        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-        versionString = proc.stdout.readline()
-        if six.PY3:
-            versionString = versionString.decode(encoding='utf-8')     
+        command = [LILYEXEC, '--version']
         try:
-            versionString = versionString.split()[-1]
-            versionString = versionString.strip()
-            versionPieces = versionString.split('.')
-        except KeyboardInterrupt:
+            proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+        except OSError:
             raise LilyTranslateException("Cannot find a copy of Lilypond installed on your system. " +
                                          "Please be sure it is installed. And that your " +
                                          "environment.UserSettings()['lilypondPath'] is set to find it.")
+        stdout, _ = proc.communicate()
+        if six.PY3:
+            stdout = stdout.decode(encoding='utf-8')
+        versionString = stdout.split()[2]
+        versionPieces = versionString.split('.')
         
         self.majorVersion = versionPieces[0]
         self.minorVersion = versionPieces[1]
@@ -222,7 +223,7 @@ class LilypondConverter(object):
     def restoreContext(self):
         try:
             self.context = self.storedContexts.pop()
-        except:
+        except IndexError:
             self.context = self.topLevelObject
 
 
@@ -262,7 +263,6 @@ class LilypondConverter(object):
         arbitrary music21 object.
 
         TODO: Add tests...
-        TODO: Add test for TinyNotationStream...
         '''
         from music21 import stream
         c = m21ObjectIn.classes
@@ -572,7 +572,8 @@ class LilypondConverter(object):
             try:
                 dur = str(self.lyMultipliedDurationFromDuration(el.duration))
                 returnString = returnString + 's'+ dur
-            except:
+            # general exception is the only way to catch str exceptions
+            except: #pylint: disable=bare-except
                 for c in el.duration.components:
                     dur = str(self.lyMultipliedDurationFromDuration(c))
                     returnString = returnString + 's'+ dur
@@ -792,12 +793,16 @@ class LilypondConverter(object):
         >>> lySequentialMusicOut
         <music21.lily.lilyObjects.LySequentialMusic object at 0x...>
         >>> print(lySequentialMusicOut)
-        { \time 3/4
-         c 4
-         d 4
-         e 4
-         f 2.
-        }
+        { \clef "bass" 
+         \time 3/4
+         c 4  
+         d 4  
+         e 4  
+         \bar "|"  %{ end measure 1 %} 
+         f 2.  
+         \bar "|."  %{ end measure 2 %} 
+          } 
+        <BLANKLINE>
         '''
         musicList = []
 
@@ -829,12 +834,17 @@ class LilypondConverter(object):
         \new Staff = ... \with {
          \override StaffSymbol #'line-count = #4
         }
-        { \time 3/4
-           c 4
-           d 4
-           e 4
-           f 2.
-          }
+        { \clef "bass" 
+             \time 3/4
+             c 4  
+             d 4  
+             e 4  
+             \bar "|"  %{ end measure 1 %} 
+             f 2.  
+             \bar "|."  %{ end measure 2 %} 
+              } 
+        <BLANKLINE>
+        <BLANKLINE>
         '''
         compositeMusicType = type
 
@@ -905,6 +915,7 @@ class LilypondConverter(object):
         >>> print(lpc.context.contents)
         [<music21.lily.lilyObjects.LyEmbeddedScm...>, <music21.lily.lilyObjects.LySimpleMusic...>, <music21.lily.lilyObjects.LySimpleMusic...>, <music21.lily.lilyObjects.LySimpleMusic...]
         >>> print(lpc.context)
+        \clef "treble" 
         \time 3/4
         c' 4
         des' 4
@@ -924,6 +935,7 @@ class LilypondConverter(object):
         >>> lpc.appendObjectsToContextFromStream(m)
         >>> print(lpc.context) # internal spaces removed...
           << \new Voice { c'' 1
+                    \bar "|."  %{ end measure 1 %} 
                   }
            \new Voice { cis'' 1
                   }
@@ -994,7 +1006,6 @@ class LilypondConverter(object):
         if 'Stream' not in c and thisObject.duration.type == 'complex':
             thisObjectSplit = thisObject.splitAtDurations()
             for subComponent in thisObjectSplit:
-                subComponent.activeSite = thisObject.activeSite
                 self.appendM21ObjectToContext(subComponent)
             return
 
@@ -1645,7 +1656,7 @@ class LilypondConverter(object):
         True
         '''
         if six.PY2:
-            fraction = unicode(numerator) + '/' + unicode(denominator)
+            fraction = unicode(numerator) + '/' + unicode(denominator) # @UndefinedVariable
         else:
             fraction = str(numerator) + '/' + str(denominator)
         lpMusicList = lyo.LyMusicList()
@@ -2135,12 +2146,16 @@ class LilypondConverter(object):
         >>> lySequentialMusicOut
         <music21.lily.lilyObjects.LySequentialMusic object at 0x...>
         >>> print(lySequentialMusicOut)
-        { \time 3/4
-         c 4
-         d 4
-         e 4
-         f 2.
-        }
+        { \clef "bass" 
+         \time 3/4
+         c 4  
+         d 4  
+         e 4  
+         \bar "|"  %{ end measure 1 %} 
+         f 2.  
+         \bar "|."  %{ end measure 2 %} 
+          } 
+        <BLANKLINE>
         '''
         musicList = []
 
@@ -2344,7 +2359,7 @@ class LilypondConverter(object):
 
         try:
             os.remove(fileName + ".eps")
-        except:
+        except OSError:
             pass
         fileform = fileName + '.' + format
         if not os.path.exists(fileform):

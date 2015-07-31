@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #-------------------------------------------------------------------------------
 # Name:         layout.py
-# Purpose:      Layout objects
+# Purpose:      Layout objects 
 #
 # Authors:      Christopher Ariza
 #               Michael Scott Cuthbert
@@ -337,11 +337,15 @@ class StaffLayout(LayoutBase):
     >>> sl
     <music21.layout.StaffLayout distance 3, staffNumber 1, staffSize 113.0, staffLines 5>
 
+
     There is one other attribute, '.hidden' which has three settings:
-       None - inherit from previous StaffLayout object, or False if no object exists 
-              (TODO: Not working; always gives False)
-       False - not hidden -- show as a default staff
-       True - hidden -- for playback only staves, or for a hidden/optimized-out staff
+       
+    * None - inherit from previous StaffLayout object, or False if no object exists 
+    * False - not hidden -- show as a default staff
+    * True - hidden -- for playback only staves, or for a hidden/optimized-out staff
+    
+    
+    Note: (TODO: .hidden None is not working; always gives False)
        
 
     '''
@@ -1101,7 +1105,7 @@ class LayoutScore(stream.Opus):
         thisStaff = self.pages[pageId].systems[systemId].staves[staffId]
         try:
             firstMeasureOfStaff = thisStaff.getElementsByClass('Measure', returnStreamSubClass='list')[0]
-        except:
+        except IndexError:
             firstMeasureOfStaff = stream.Stream()
             environLocal.warn("No measures found in pageId %d, systemId %d, staffId %d" % (pageId, systemId, staffId))
 
@@ -1150,7 +1154,7 @@ class LayoutScore(stream.Opus):
         thisStaff = self.pages[pageId].systems[systemId].staves[staffId]
         try:
             firstMeasureOfStaff = thisStaff.getElementsByClass('Measure')[0]
-        except:
+        except IndexError:
             firstMeasureOfStaff = stream.Stream()
             environLocal.warn("No measures found in pageId %d, systemId %d, staffId %d" % (pageId, systemId, staffId))
 
@@ -1457,7 +1461,7 @@ class System(stream.Score):
     belongs on a single notated system.
     '''
     def __init__(self, *args, **keywords):
-        stream.Stream.__init__(self, *args, **keywords)
+        stream.Score.__init__(self, *args, **keywords)
         self.systemNumber = 1
         self.systemLayout = None
         self.measureStart = None
@@ -1491,7 +1495,6 @@ class Test(unittest.TestCase):
         pass
 
     def testBasic(self):
-        import music21
         from music21 import note
         from music21.musicxml import m21ToString
         s = stream.Stream()
@@ -1503,33 +1506,33 @@ class Test(unittest.TestCase):
             m.append(n)
             s.append(m)
 
-        sl = music21.layout.SystemLayout()
+        sl = SystemLayout()
         #sl.isNew = True # this should not be on first system
         # as this causes all subsequent margins to be distorted
         sl.leftMargin = 300
         sl.rightMargin = 300
         s.getElementsByClass('Measure')[0].insert(0, sl)
 
-        sl = music21.layout.SystemLayout()
+        sl = SystemLayout()
         sl.isNew = True
         sl.leftMargin = 200
         sl.rightMargin = 200
         sl.distance = 40
         s.getElementsByClass('Measure')[2].insert(0, sl)
 
-        sl = music21.layout.SystemLayout()
+        sl = SystemLayout()
         sl.isNew = True
         sl.leftMargin = 220
         s.getElementsByClass('Measure')[4].insert(0, sl)
 
-        sl = music21.layout.SystemLayout()
+        sl = SystemLayout()
         sl.isNew = True
         sl.leftMargin = 60
         sl.rightMargin = 300
         sl.distance = 200
         s.getElementsByClass('Measure')[6].insert(0, sl)
 
-        sl = music21.layout.SystemLayout()
+        sl = SystemLayout()
         sl.isNew = True
         sl.leftMargin = 0
         sl.rightMargin = 0

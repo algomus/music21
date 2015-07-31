@@ -31,8 +31,8 @@ _MOD = "pitch.py"
 environLocal = environment.Environment(_MOD)
 
 try:
-    basestring
-except:
+    basestring # @UndefinedVariable
+except NameError:
     basestring = str # @ReservedAssignment
 
 STEPREF = {
@@ -297,7 +297,7 @@ def _convertCentsToAlterAndCents(shift):
 
 
 def _convertHarmonicToCents(value):
-    '''Given a harmonic number, return the total number shift in cents assuming 12 tone equal temperament.
+    r'''Given a harmonic number, return the total number shift in cents assuming 12 tone equal temperament.
 
     >>> pitch._convertHarmonicToCents(8)
     3600
@@ -744,21 +744,6 @@ class Accidental(SlottedObject):
         '''
         return sorted(accidentalNameToModifier.keys(), key=str.lower)
 
-    ### REMOVED METHODS ####
-    def show(self, *args, **kws):
-        from music21 import note
-        environLocal.warn("as of v.1.9., Pitches are not Music21Objects. Do not call show on them; this method will go away in 2.0")
-        n = note.Note()
-        n.pitch = self
-        n.show(*args, **kws)
-    
-    def write(self, *args, **kws):
-        from music21 import note
-        environLocal.warn("as of v.1.9., Pitches are not Music21Objects. Do not call write on them; this method will go away in 2.0")
-        n = note.Note()
-        n.pitch = self
-        n.write(*args, **kws)
-
     ### PUBLIC METHODS ###
 
     def set(self, name):
@@ -1030,6 +1015,7 @@ class Accidental(SlottedObject):
 
 
 #-------------------------------------------------------------------------------
+## tried as SlottedObject -- made creation time slower! Not worth the restrictions
 class Pitch(object):
     '''
     A fundamental object that represents a single pitch.
@@ -1212,17 +1198,18 @@ class Pitch(object):
     such as .classes and .groups, but they don't have Duration or Sites objects
     '''
     # define order to present names in documentation; use strings
-    _DOC_ORDER = ['name', 'nameWithOctave', 'step', 'pitchClass', 'octave', 'midi', 'german', 'french', 'spanish', 'italian','dutch']
-    # documentation for all attributes (not properties or methods)
-    _DOC_ATTR = {
-    }
+    _DOC_ORDER = ['name', 'nameWithOctave', 'step', 'pitchClass', 'octave', 'midi', 'german', 
+                  'french', 'spanish', 'italian', 'dutch']
+    ## documentation for all attributes (not properties or methods)
+    #_DOC_ATTR = {
+    #}
 
     # constants shared by all classes
     _twelfth_root_of_two = TWELFTH_ROOT_OF_TWO
+    classes = ['Pitch', 'object'] # makes subclassing harder; was [x.__name__ for x in self.__class__.mro()] but 5% of creation time 
 
     def __init__(self, name=None, **keywords):
-        self.classes = [x.__name__ for x in self.__class__.mro()] 
-        self.groups = base.Groups()
+        self.groups = base.Groups() # 1% of creation time time
 
         if isinstance(name, type(self)):
             name = name.nameWithOctave
@@ -1239,7 +1226,7 @@ class Pitch(object):
         # note that creating an Accidental objects is much more time consuming
         # than a microtone
         self._accidental = None
-        self._microtone = Microtone()
+        self._microtone = Microtone() # 5% of pitch creation time.
 
         # CA, Q: should this remain an attribute or only refer to value in defaults?
         # MSC A: no, it's a useful attribute for cases such as scales where if there are
@@ -1613,7 +1600,11 @@ class Pitch(object):
         return post
 
     alter = property(_getAlter,
-        doc = '''Return the pitch alteration as a numeric value, where 1 is the space of one half step and all base pitch values are given by step alone. Thus, the alter value combines the pitch change suggested by the Accidental and the Microtone combined.
+        doc = '''
+        Return the pitch alteration as a numeric value, where 1 
+        is the space of one half step and all base pitch values are 
+        given by step alone. Thus, the alter value combines the pitch change 
+        suggested by the Accidental and the Microtone combined.
 
 
         >>> p = pitch.Pitch('g#4')
@@ -1641,7 +1632,8 @@ class Pitch(object):
         >>> str(p), p.microtone
         ('G#(+50c)', (+50c))
 
-        >>> p = pitch.Pitch('A`')
+        >>> p = pitch.Pitch('A')
+        >>> p.accidental = pitch.Accidental('half-flat')  # back-tick
         >>> str(p), p.microtone
         ('A`', (+0c))
         >>> x = p.convertQuarterTonesToMicrotones(inPlace=False)
@@ -2262,11 +2254,13 @@ class Pitch(object):
             return self.step + str(self.octave)
 
     def _getPitchClass(self):
-        return int(round(self.ps % 12))
+        pc = int(round(self.ps) % 12)
+        if pc == 12:
+            pc = 0
+        return pc
 
     def _setPitchClass(self, value):
         '''Set the pitchClass.
-
 
         >>> a = pitch.Pitch('a3')
         >>> a.pitchClass = 3
@@ -2292,7 +2286,6 @@ class Pitch(object):
         C#=1, D=2...B=11. Can be set using integers (0-11) or 'A' or 'B'
         for 10 or 11.
 
-
         >>> a = pitch.Pitch('a3')
         >>> a.pitchClass
         9
@@ -2311,6 +2304,57 @@ class Pitch(object):
         10
         >>> dis.name
         'B-'
+        
+        Extreme octaves will not affect pitchClass
+        
+        >>> dis.octave = -10
+        >>> dis.pitchClass
+        10
+        
+        In the past, certain microtones and/or octaves were returning pc 12! 
+        This is now fixed.
+        
+        >>> flattedC = pitch.Pitch('C4')
+        >>> flattedC.microtone = -4
+        >>> print(flattedC)
+        C4(-4c)
+        >>> flattedC.pitchClass
+        0
+        >>> print(flattedC.ps)
+        59.96
+        >>> flattedC.octave = -3
+        >>> print(flattedC.ps)
+        -24.04
+        >>> flattedC.pitchClass
+        0
+        
+        Note that the pitchClass of a microtonally altered pitch is the pitch class of
+        the nearest pitch and that differences can occur between Python 2 and Python 3
+        rounding mechanisms.  For instance, C~4 (C half sharp 4) is pitchClass 1 in
+        Python 2, which rounds the ps of 60.5 to 61, while it is pitchClass 0 in Python 3,
+        which uses the "round-to-even" algorithm for rounding. However, C#~ (C one-and-a-half-sharp)
+        will round the same way in each system, to D.
+        
+        >>> p = pitch.Pitch("C#~4")
+        >>> p.ps
+        61.5
+        >>> p.pitchClass
+        2
+        
+        This means that pitchClass + microtone is NOT a good way to estimate the frequency
+        of a pitch.  For instance, if we take a pitch that is 90% of the way between pitchClass
+        0 (C) and pitchClass 1 (C#/D-flat), this formula gives an inaccurate answer of 1.9, not
+        0.9:
+        
+        >>> p = pitch.Pitch("C4")
+        >>> p.microtone = 90
+        >>> p
+        <music21.pitch.Pitch C4(+90c)>
+        >>> p.pitchClass + p.microtone.cents/100.0
+        1.9
+        
+        
+        
         ''')
 
 
@@ -3151,16 +3195,91 @@ class Pitch(object):
         >>> p3.isEnharmonic(p1)
         False
 
-        OMIT_FROM_DOCS
+        Quarter tone enharmonics work as well:
+        
+        >>> pC = pitch.Pitch('C4')
+        >>> pC.accidental = pitch.Accidental('one-and-a-half-sharp')
+        >>> pC
+        <music21.pitch.Pitch C#~4>
+        >>> pD = pitch.Pitch('D4')
+        >>> pD.accidental = pitch.Accidental('half-flat')
+        >>> pD
+        <music21.pitch.Pitch D`4>
+        >>> pC.isEnharmonic(pD)
+        True
+
+        Notes in different ranges are not enharmonics:
+        
+        >>> pitch.Pitch("C#4").isEnharmonic( pitch.Pitch("D-5") )
+        False
+
+        However, different octaves can be the same range, because octave number
+        is relative to the `step` (natural form) of the pitch.
+        
+        >>> pitch.Pitch("C4").isEnharmonic( pitch.Pitch("B#3") )
+        True
+        >>> pitch.Pitch("C4").isEnharmonic( pitch.Pitch("B#4") )
+        False
+
+        If either pitch is octaveless, then they a pitch in any octave will match:
+        
+        >>> pitch.Pitch("C#").isEnharmonic( pitch.Pitch("D-9") )
+        True
+        >>> pitch.Pitch("C#4").isEnharmonic( pitch.Pitch("D-") )
+        True
+        
+        Microtonally altered pitches do not return True unless the microtones are the same:
+        
+        >>> pSharp = pitch.Pitch("C#4")
+        >>> pSharp.microtone = 20
+        >>> pFlat = pitch.Pitch("D-4")
+        >>> pSharp.isEnharmonic(pFlat)
+        False
+        
+        >>> pFlat.microtone = 20
+        >>> pSharp.isEnharmonic(pFlat)
+        True
+        
+
+        Extreme enharmonics seem to work great.
+
         >>> p4 = pitch.Pitch('B##3')
         >>> p5 = pitch.Pitch('D-4')
         >>> p4.isEnharmonic(p5)
         True
         '''
+        if other.octave is None or self.octave is None:
+            if (other.ps - self.ps) % 12 == 0:
+                return True
+            return False
         # if pitch space are equal, these are enharmonics
-        if other.ps == self.ps:
-            return True
-        return False
+        else:
+            if other.ps == self.ps:
+                return True
+            return False
+
+    def _getEnharmonicHelper(self, inPlace, intervalString):
+        '''
+        abstracts the code from `getHigherEnharmonic` and `getLowerEnharmonic`
+        '''
+        intervalObj = interval.Interval(intervalString)
+        octaveStored = self.octave # may be None
+        if not inPlace:
+            post = intervalObj.transposePitch(self, maxAccidental=None)
+            if octaveStored is None:
+                post.octave = None
+            return post
+        else:
+            p = intervalObj.transposePitch(self, maxAccidental=None)
+            self.step = p.step
+            self.accidental = p.accidental
+            if p.microtone is not None:
+                self.microtone = p.microtone
+            if octaveStored is None:
+                self.octave = None
+            else:
+                self.octave = p.octave
+            return None
 
     def getHigherEnharmonic(self, inPlace=False):
         '''
@@ -3168,14 +3287,12 @@ class Pitch(object):
         enharmonic.  That is, the `Pitch` a diminished-second above
         the current `Pitch`.
 
-
         >>> p1 = pitch.Pitch('C#3')
         >>> p2 = p1.getHigherEnharmonic()
         >>> print(p2)
         D-3
 
-
-        We can also set it in place:
+        We can also set it in place (in which case it returns None):
 
         >>> p1 = pitch.Pitch('C#3')
         >>> p1.getHigherEnharmonic(inPlace=True)
@@ -3195,29 +3312,30 @@ class Pitch(object):
         Traceback (most recent call last):
         AccidentalException: -5 is not a supported accidental type
 
+
+        Note that half accidentals get converted to microtones:
+
+        >>> pHalfSharp = pitch.Pitch('D~4')
+        >>> p3QtrsFlat = pHalfSharp.getHigherEnharmonic()
+        >>> print(p3QtrsFlat)
+        E-4(-50c)
+
+        (Same thing if done in place; prior bug)
+
+        >>> pHalfSharp = pitch.Pitch('D~4')
+        >>> pHalfSharp.getHigherEnharmonic(inPlace=True)
+        >>> print(pHalfSharp)
+        E-4(-50c)
+
         '''
-        intervalObj = interval.Interval('d2')
-        octaveStored = self.octave # may be None
-        if not inPlace:
-            post = intervalObj.transposePitch(self, maxAccidental=None)
-            if octaveStored is None:
-                post.octave = None
-            return post
-        else:
-            p = intervalObj.transposePitch(self, maxAccidental=None)
-            self._setName(p.nameWithOctave)
-            self.accidental = p.accidental
-            if octaveStored is None:
-                self.octave = None
-            return None
+        return self._getEnharmonicHelper(inPlace, 'd2')
 
     def getLowerEnharmonic(self, inPlace=False):
         '''
         returns a Pitch enharmonic that is a diminished second
         below the current note
 
-        If `inPlace` is set to true, changes the current Pitch.
-
+        If `inPlace` is set to true, changes the current Pitch and returns None.
 
         >>> p1 = pitch.Pitch('C-3')
         >>> p2 = p1.getLowerEnharmonic()
@@ -3229,20 +3347,7 @@ class Pitch(object):
         >>> print(p1)
         B##2
         '''
-        intervalObj = interval.Interval('-d2')
-        octaveStored = self.octave # may be None
-        if not inPlace:
-            post = intervalObj.transposePitch(self)
-            if octaveStored is None:
-                post.octave = None
-            return post
-        else:
-            p = intervalObj.transposePitch(self)
-            self._setName(p.nameWithOctave)
-            self.accidental = p.accidental
-            if octaveStored is None:
-                self.octave = None
-            return None
+        return self._getEnharmonicHelper(inPlace, '-d2')
 
     def simplifyEnharmonic(self, inPlace=False, mostCommon=False):
         '''
@@ -3260,10 +3365,6 @@ class Pitch(object):
         of fifths).  Thus G-flat becomes F#, A# becomes B-flat,
         D# becomes E-flat, D-flat becomes C#, G# and A-flat are left
         alone.
-
-        TODO: should be called automatically after ChromaticInterval
-        transpositions.
-
 
         >>> p1 = pitch.Pitch("B#5")
         >>> p1.simplifyEnharmonic().nameWithOctave
@@ -3390,6 +3491,14 @@ class Pitch(object):
         >>> p = pitch.Pitch('B#')
         >>> p.getEnharmonic()
         <music21.pitch.Pitch C>
+        
+        
+        Works with half-sharps, etc. but converts them to microtones:
+        
+        >>> p = pitch.Pitch('D~')
+        >>> print(p.getEnharmonic())
+        E-(-50c)
+        
         '''
         if inPlace:
             post = self
@@ -3672,7 +3781,7 @@ class Pitch(object):
     #---------------------------------------------------------------------------
     # utilities for pitch object manipulation
 
-    def transposeBelowTarget(self, target, minimize=False):
+    def transposeBelowTarget(self, target, minimize=False, inPlace=True):
         '''
         Given a source Pitch, shift it down octaves until it is below the
         target. Note: this manipulates src inPlace.
@@ -3680,8 +3789,23 @@ class Pitch(object):
         If `minimize` is True, a pitch below the target will move up to the
         nearest octave.
 
-        >>> pitch.Pitch('g5').transposeBelowTarget(pitch.Pitch('c#4'))
+        >>> p = pitch.Pitch('g5')
+        >>> p.transposeBelowTarget(pitch.Pitch('c#4'), inPlace=True)
         <music21.pitch.Pitch G3>
+        >>> p
+        <music21.pitch.Pitch G3>
+
+
+        Music21 2.0 transition period: inPlace is allowed now. Right now
+        the default is True, but it will become False later.
+
+        >>> p = pitch.Pitch('g5')
+        >>> c = p.transposeBelowTarget(pitch.Pitch('c#4'), inPlace=False)
+        >>> c
+        <music21.pitch.Pitch G3>
+        >>> p
+        <music21.pitch.Pitch G5>
+        
 
         If already below the target, make no change:
 
@@ -3693,8 +3817,13 @@ class Pitch(object):
         >>> pitch.Pitch('g#8').transposeBelowTarget(pitch.Pitch('g#1'))
         <music21.pitch.Pitch G#1>
 
+
+        This does nothing because it is already low enough...
+
         >>> pitch.Pitch('g#2').transposeBelowTarget(pitch.Pitch('f#8'))
         <music21.pitch.Pitch G#2>
+
+        But with minimize=True, it makes a difference...
 
         >>> pitch.Pitch('g#2').transposeBelowTarget(pitch.Pitch('f#8'), minimize=True)
         <music21.pitch.Pitch G#7>
@@ -3703,8 +3832,11 @@ class Pitch(object):
         <music21.pitch.Pitch F#8>
 
         '''
-        # TODO: add inPlace as an option, default is True
-        src = self
+        # TODO: switch inPlace: default is True now, will become False.
+        if inPlace:
+            src = self
+        else:
+            src = copy.deepcopy(self)
         while True:
             # ref 20, min 10, lower ref
             # ref 5, min 10, do not lower
@@ -3721,7 +3853,7 @@ class Pitch(object):
                     src.octave += 1
         return src
 
-    def transposeAboveTarget(self, target, minimize=False):
+    def transposeAboveTarget(self, target, minimize=False, inPlace=True):
         '''
         Given a source Pitch, shift it up octaves until it is above the target.
         Note: this manipulates src inPlace.
@@ -3754,7 +3886,11 @@ class Pitch(object):
         <music21.pitch.Pitch D3>
 
         '''
-        src = self
+        # TODO: switch inPlace: default is True now, will become False.
+        if inPlace:
+            src = self
+        else:
+            src = copy.deepcopy(self)
         # case where self is below target
         while True:
             # ref 20, max 10, do not raise ref
@@ -4359,7 +4495,7 @@ class Test(unittest.TestCase):
         '''Test updating accidental display.
         '''
 
-        def proc(pList, past=[]):
+        def proc(pList, past):
             for p in pList:
                 p.updateAccidentalDisplay(past)
                 past.append(p)
@@ -4462,7 +4598,7 @@ class Test(unittest.TestCase):
         '''
         from music21 import key
 
-        def proc(pList, past=[], alteredPitches=[]):
+        def proc(pList, past, alteredPitches):
             for p in pList:
                 p.updateAccidentalDisplay(past, alteredPitches=alteredPitches)
                 past.append(p)
@@ -4570,12 +4706,12 @@ class Test(unittest.TestCase):
         test if octave display is working
         '''
 
-        def proc1(pList, past=[]):
+        def proc1(pList, past):
             for p in pList:
                 p.updateAccidentalDisplay(past, cautionaryPitchClass=True, cautionaryNotImmediateRepeat=False)
                 past.append(p)
 
-        def proc2(pList, past=[]):
+        def proc2(pList, past):
             for p in pList:
                 p.updateAccidentalDisplay(past, cautionaryPitchClass=False, cautionaryNotImmediateRepeat=False)
                 past.append(p)
@@ -4620,8 +4756,8 @@ class Test(unittest.TestCase):
         a nasty test from Jose Cabal-Ugaz about octave leaps, cautionaryNotImmediateRepeat = False
         and key signature conflicts.
         '''
-        from music21 import tinyNotation, key
-        bm = tinyNotation.TinyNotationStream("4/4 fn1 fn1 e-8 e'-8 fn4 en4 e'n4")
+        from music21 import converter, key
+        bm = converter.parse("tinynotation: 4/4 fn1 fn1 e-8 e'-8 fn4 en4 e'n4").flat
         bm.insert(0, key.KeySignature(1))
         bm.makeNotation(inPlace=True, cautionaryNotImmediateRepeat=False)
         assert(bm.flat.notes[0].accidental.name == 'natural')     # Fn
@@ -4817,3 +4953,4 @@ _DOC_ORDER = [Pitch, Accidental, Microtone]
 if __name__ == "__main__":
     import music21
     music21.mainTest(Test)
+    

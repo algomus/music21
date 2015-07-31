@@ -314,15 +314,6 @@ class KeyException(exceptions21.Music21Exception):
 
 
 
-#def keyFromString(strKey):
-#    '''Given a string representing a key, return the appropriate Key object. 
-#    '''
-#    #TODO: Write keyFromString
-#    #    return None
-#    #raise KeyException("keyFromString not yet written")
-
-
-
 
 #-------------------------------------------------------------------------------
 class KeySignature(base.Music21Object):
@@ -938,7 +929,11 @@ class Key(KeySignature, scale.DiatonicScale):
                 focus.append(cc)
 #         print focus
 #         print
-
+        if len(focus) < 2:
+            if self.correlationCoefficient <= 0:
+                return 0.0
+            else:
+                return self.correlationCoefficient
         # take abs magnitude as one factor; assume between 0 and 1
         # greater certainty often has a larger number
         absMagnitude = focus[0] 
@@ -1118,26 +1113,30 @@ class Test(unittest.TestCase):
         sc5 = scale.MajorScale('f#')
 
         s = stream.Stream()
-        [s.append(note.Note(p)) for p in sc1.pitches]
+        for p in sc1.pitches:
+            s.append(note.Note(p)) 
         k = s.analyze('KrumhanslSchmuckler')
         ta = k.tonalCertainty(method='correlationCoefficient')
         self.assertEqual(ta < 2 and ta > 0.1, True)
 
         s = stream.Stream()
-        [s.append(note.Note(p)) for p in sc1.pitches + sc2.pitches + sc2.pitches + sc3.pitches]
+        for p in sc1.pitches + sc2.pitches + sc2.pitches + sc3.pitches:
+            s.append(note.Note(p))
         k = s.analyze('KrumhanslSchmuckler')
         ta = k.tonalCertainty(method='correlationCoefficient')
         self.assertEqual(ta < 2 and ta > 0.1, True)
 
         s = stream.Stream()
-        [s.append(note.Note(p)) for p in sc1.pitches + sc5.pitches]
+        for p in sc1.pitches + sc5.pitches:
+            s.append(note.Note(p))
         k = s.analyze('KrumhanslSchmuckler')
         ta = k.tonalCertainty(method='correlationCoefficient')
         self.assertEqual(ta < 2 and ta > 0.1, True)
 
 
         s = stream.Stream()
-        [s.append(note.Note(p)) for p in ['c', 'g', 'c', 'c', 'e']]
+        for p in ('c', 'g', 'c', 'c', 'e'):
+            s.append(note.Note(p))
         k = s.analyze('KrumhanslSchmuckler')
         ta = k.tonalCertainty(method='correlationCoefficient')
         self.assertEqual(ta < 2 and ta > 0.1, True)

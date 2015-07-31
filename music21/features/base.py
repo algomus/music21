@@ -424,7 +424,7 @@ class StreamForms(object):
                         nNext = post[iNext]
                         try:
                             histo[abs(n.midi - nNext.midi)] += 1
-                        except:
+                        except AttributeError:
                             pass # problem with not having midi
             self._forms['midiIntervalHistogram'] = histo
             return self._forms['midiIntervalHistogram']
@@ -862,9 +862,16 @@ class DataSet(object):
     >>> ds.getFeaturesAsList()[1]
     ['bach/bwv324.xml', 0.12, 0.0, 1.0, 0.12, 0.56..., 0.0, ..., 0.52..., 0.0, 0.68..., 0.0, 0.56..., 0, 4, 4, 'Bach']
     >>> ds = ds.getString()
+    
+    
+    By default, all exceptions are caught and printed if debug mode is on.
+    
+    Set ds.failFast = True to not catch them.    
+    
+    Set ds.quiet = False to print them regardless of debug mode.
     '''
 
-    def __init__(self, classLabel=None, featureExtractors=[]):
+    def __init__(self, classLabel=None, featureExtractors=()):
         # assume a two dimensional array
         self.dataInstances = []
         self.streams = []
@@ -874,6 +881,9 @@ class DataSet(object):
         self._classLabel = classLabel
         # store a multidimensional storage of all features
         self._features = [] 
+        
+        self.failFast = False
+        self.quiet = True
         # set extractors
         self.addFeatureExtractors(featureExtractors)
         
@@ -993,8 +1003,14 @@ class DataSet(object):
                 # in some cases there might be problem; to not fail 
                 try:
                     fReturned = fe.extract()
-                except: # for now take any error
-                    environLocal.printDebug(['failed feature extactor:', fe])
+                except Exception as e: # for now take any error  # pylint: disable=broad-except
+                    fList = ['failed feature extactor:', fe, str(e)]
+                    if self.quiet is True:                   
+                        environLocal.printDebug(fList)
+                    else:
+                        environLocal.warn(fList)
+                    if self.failFast is True:
+                        raise e
                     # provide a blank feature extactor
                     fReturned = fe.getBlankFeature()
 
@@ -1124,7 +1140,7 @@ def allFeaturesAsList(streamInput):
 
 
 #-------------------------------------------------------------------------------
-def extractorsById(idOrList, library=['jSymbolic', 'native']):
+def extractorsById(idOrList, library=('jSymbolic', 'native')):
     '''Given one or more :class:`~music21.features.FeatureExtractor` ids, return the appropriate  subclass. An optional `library` argument can be added to define which module is used. Current options are jSymbolic and native.
 
     
@@ -1178,7 +1194,7 @@ def extractorsById(idOrList, library=['jSymbolic', 'native']):
     return post
 
 
-def extractorById(idOrList, library=['jSymbolic', 'native']):
+def extractorById(idOrList, library=('jSymbolic', 'native')):
     '''Get the first feature matched by extractorsById().
 
     
@@ -1195,10 +1211,9 @@ def extractorById(idOrList, library=['jSymbolic', 'native']):
     return None # no match
 
 
-def vectorById(streamObj, vectorId, library=['jSymbolic', 'native']):
+def vectorById(streamObj, vectorId, library=('jSymbolic', 'native')):
     '''Utility function to get a vector from an extractor
 
-    
     >>> s = stream.Stream()
     >>> s.append(note.Note('A4'))
     >>> features.vectorById(s, 'p20')
@@ -1511,9 +1526,9 @@ class Test(unittest.TestCase):
 
         # process with all feature extractors, store all features
         ds.process()
-        ds.getString(format='tab')
-        ds.getString(format='csv')
-        ds.getString(format='arff')
+        ds.getString(format='tab') # pylint: disable=unexpected-keyword-arg
+        ds.getString(format='csv') # pylint: disable=unexpected-keyword-arg
+        ds.getString(format='arff') # pylint: disable=unexpected-keyword-arg
 
 
 
@@ -1674,8 +1689,10 @@ class Test(unittest.TestCase):
         tree = orngTree.TreeLearner(data, sameMajorityPruning=1, mForPruning=2)
         knn = orange.kNNLearner(data, k=21)
         
-        majority.name="Majority"; bayes.name="Naive Bayes";
-        tree.name="Tree"; knn.name="kNN"        
+        majority.name="Majority"
+        bayes.name="Naive Bayes"
+        tree.name="Tree"
+        knn.name="kNN"        
         classifiers = [majority, bayes, tree, knn]
         
         # print the head
@@ -1683,14 +1700,14 @@ class Test(unittest.TestCase):
         print("Original Class", end=' ')
         for l in classifiers:
             print("%-13s" % (l.name), end=' ')
-        print
+        print()
         
         for example in data:
             print("(%-10s)  " % (example.getclass()), end=' ')
             for c in classifiers:
-                p = apply(c, [example, orange.GetProbabilities])
+                p = c([example, orange.GetProbabilities])
                 print("%5.3f        " % (p[0]), end=' ')
-            print
+            print("")
 
 
     def xtestOrangeClassifierTreeLearner(self):

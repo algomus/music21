@@ -6,7 +6,7 @@
 # Authors:      Michael Scott Cuthbert
 #               Christopher Ariza
 #
-# Copyright:    Copyright © 2008-2012 Michael Scott Cuthbert and the music21
+# Copyright:    Copyright © 2008-2015 Michael Scott Cuthbert and the music21
 #               Project
 # License:      LGPL or BSD, see license.txt
 #------------------------------------------------------------------------------
@@ -15,14 +15,10 @@
 Editorial objects store comments and other meta-data associated with specific
 :class:`~music21.note.Note` objects or other music21 objects.
 '''
-
-
-from __future__ import unicode_literals
-
 import unittest
 from music21 import exceptions21
 from music21.common import SlottedObject
-
+from music21.ext import six
 
 #------------------------------------------------------------------------------
 
@@ -85,7 +81,7 @@ def getObjectsWithEditorial(
             try:
                 editorialContents = getattr(
                     obj.editorial, editorialStringToFind)
-            except:
+            except AttributeError:
                 editorialContents = obj.editorial.misc[editorialStringToFind]
 
             if listOfValues is not None:
@@ -93,7 +89,7 @@ def getObjectsWithEditorial(
                     listofOBJToReturn.append(obj)
             else:
                 listofOBJToReturn.append(obj)
-        except:
+        except KeyError:
             pass
     return listofOBJToReturn
 
@@ -140,7 +136,6 @@ class NoteEditorial(SlottedObject):
         'harmonicIntervals': 'a list for when you want to store more than one harmonicInterval',
         'melodicInterval': 'an :class:`~music21.interval.Interval` object that specifies the melodic interval to the next note in this part/voice/stream, etc.',
         'melodicIntervals': 'a list for storing more than one melodic interval',
-        'melodicIntervalOverRests': 'same as melodicInterval but ignoring rests; MIGHT BE REMOVED SOON',
         'melodicIntervalsOverRests': 'same thing but a list',
         'misc': 'A dict to hold anything you might like to store.',
         }
@@ -154,7 +149,6 @@ class NoteEditorial(SlottedObject):
         'hidden',
         'melodicInterval',
         'melodicIntervals',
-        'melodicIntervalOverRests',
         'melodicIntervalsOverRests',
         'comment',
         )
@@ -171,7 +165,6 @@ class NoteEditorial(SlottedObject):
         self.hidden = False
         self.melodicInterval = None
         self.melodicIntervals = []
-        self.melodicIntervalOverRests = None
         self.melodicIntervalsOverRests = []
         self.comment = Comment()
 
@@ -186,7 +179,7 @@ class NoteEditorial(SlottedObject):
 
             >>> n = note.Note()
             >>> n.editorial.lilyStart()
-            u''
+            ''
 
         ::
 
@@ -225,7 +218,10 @@ class NoteEditorial(SlottedObject):
         currently just returns self.comment.lily or "".
         '''
         if self.comment and self.comment.text:
-            return unicode(self.comment.lily)
+            if six.PY2:
+                return unicode(self.comment.lily) # pylint: disable=undefined-variable
+            else:
+                return str(self.comment.lily)
         else:
             return ''
 
@@ -250,7 +246,7 @@ class Comment(SlottedObject):
         >>> n.editorial.comment.text = "hello"
         >>> n.editorial.comment.position = "above"
         >>> n.editorial.comment.lily
-        u'^"hello"'
+        '^"hello"'
 
     '''
 

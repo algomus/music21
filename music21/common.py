@@ -24,8 +24,8 @@ import hashlib
 import random
 import inspect
 import weakref
-from fractions import Fraction # speedup 50% below...
 
+from fractions import Fraction # speedup 50% below...
 
 from music21 import defaults
 from music21 import exceptions21
@@ -33,8 +33,8 @@ from music21.ext import six
 
 #python3
 try:
-    basestring
-except:
+    basestring # @UndefinedVariable 
+except NameError:
     basestring = str # @ReservedAssignment
 
 
@@ -82,7 +82,7 @@ musicOrdinals[8] = "Octave"
 musicOrdinals[15] = "Double-octave"
 musicOrdinals[22] = "Triple-octave"
 
-WHITESPACE = re.compile('\s+')
+WHITESPACE = re.compile(r'\s+')
 LINEFEED = re.compile('\n+')
 
 DEBUG_OFF = 0
@@ -119,44 +119,15 @@ def getMissingImportStr(modNameList):
         return 'Certain music21 functions might need these optional packages: %s; if you run into errors, install it by following the instructions at http://mit.edu/music21/doc/installing/installAdditional.html' % ', '.join(modNameList)
 
 #-------------------------------------------------------------------------------
-_subconverterCachedList = []
-
 def subConverterList():
     '''
     returns a list of subconverter classes available to music21
     in converter/subConverters, including the stub SubConverter class
     
-    >>> for sc in common.subConverterList():
-    ...    sc
-    <class 'music21.converter.subConverters.ConverterABC'>
-    <class 'music21.converter.subConverters.ConverterBraille'>
-    <class 'music21.converter.subConverters.ConverterCapella'>
-    <class 'music21.converter.subConverters.ConverterHumdrum'>
-    <class 'music21.converter.subConverters.ConverterIPython'>
-    <class 'music21.converter.subConverters.ConverterLilypond'>
-    <class 'music21.converter.subConverters.ConverterMEI'>
-    <class 'music21.converter.subConverters.ConverterMidi'>
-    <class 'music21.converter.subConverters.ConverterMuseData'>
-    <class 'music21.converter.subConverters.ConverterMusicXML'>
-    <class 'music21.converter.subConverters.ConverterNoteworthy'>
-    <class 'music21.converter.subConverters.ConverterNoteworthyBinary'>
-    <class 'music21.converter.subConverters.ConverterRomanText'>
-    <class 'music21.converter.subConverters.ConverterScala'>
-    <class 'music21.converter.subConverters.ConverterText'>
-    <class 'music21.converter.subConverters.ConverterTextLine'>
-    <class 'music21.converter.subConverters.ConverterTinyNotation'>
-    <class 'music21.converter.subConverters.ConverterVexflow'>
-    <class 'music21.converter.subConverters.SubConverter'>    '''
-    from music21.converter import subConverters
-    import types
-    if len(_subconverterCachedList) > 0:
-        return _subconverterCachedList
-    for i in sorted(list(subConverters.__dict__)):
-        name = getattr(subConverters, i)
-        if callable(name) and not isinstance(name, types.FunctionType):
-            if hasattr(name, 'registerFormats'):     
-                _subconverterCachedList.append(name)
-    return _subconverterCachedList
+    DEPRECATED May 2015: moved to converter. #TODO: Remove
+    '''
+    from music21 import converter
+    return converter.Converter().subconvertersList()
 
 def findSubConverterForFormat(fmt):
     '''
@@ -177,7 +148,8 @@ def findSubConverterForFormat(fmt):
     
     '''
     fmt = fmt.lower().strip()
-    for sc in subConverterList():
+    scl = subConverterList()
+    for sc in scl:
         formats = sc.registerFormats
         if fmt in formats:
             return sc
@@ -657,7 +629,7 @@ def opFrac(num):
         else:
             return num # leave fraction alone
     else:
-        raise Exception("Cannot convert num: %r" % num)
+        raise TypeError("Cannot convert num: %r" % num)
         
 
 
@@ -834,9 +806,9 @@ def lessThan(x, y = 0.0, grain=1e-7):
 
 
 def nearestMultiple(n, unit):
-    '''Given a positive value `n`, return the nearest multiple of the supplied `unit` as well as 
+    '''
+    Given a positive value `n`, return the nearest multiple of the supplied `unit` as well as 
     the absolute difference (error) to seven significant digits and the signed difference.
-
 
     >>> print(common.nearestMultiple(.25, .25))
     (0.25, 0.0, 0.0)
@@ -874,9 +846,13 @@ def nearestMultiple(n, unit):
     True
 
 
+    >>> common.nearestMultiple(-0.5, 0.125)
+    Traceback (most recent call last):
+    ValueError: n (-0.5) is less than zero. Thus cannot find nearest multiple for a value less than the unit, 0.125
+
     '''
     if n < 0:
-        raise Exception('cannot find nearest multiple for a value less than the unit: %s, %s' % (n, unit))
+        raise ValueError('n (%s) is less than zero. Thus cannot find nearest multiple for a value less than the unit, %s' % (n, unit))
 
     mult = math.floor(n / float(unit)) # can start with the floor
     halfUnit = unit / 2.0
@@ -919,7 +895,7 @@ def standardDeviation(coll, bassel=False):
 
 def isNum(usrData):
     '''check if usrData is a number (float, int, long, Decimal), return boolean
-    IMPROVE: when 2.6 is everywhere: add numbers class.
+    TODO: consider using numbers class (wasn't available until 2.6)
 
     >>> common.isNum(3.0)
     True
@@ -927,12 +903,24 @@ def isNum(usrData):
     True
     >>> common.isNum('three')
     False
+    
+    True and False are NOT numbers:
+    
+    >>> common.isNum(True)
+    False
+    >>> common.isNum(False)
+    False
+    >>> common.isNum(None)
+    False
     '''
     try:
         # TODO: this may have unexpected consequences: find
         dummy = usrData + 0
-        return True
-    except:
+        if usrData is not True and usrData is not False:
+            return True
+        else:
+            return False
+    except Exception: # pylint: disable=broad-except
         return False
 
 #     if (isinstance(usrData, int) or
@@ -975,7 +963,6 @@ def contiguousList(inputListOrTuple):
 
 def isStr(usrData):
     """Check of usrData is some form of string, including unicode.
-
 
     >>> common.isStr(3)
     False
@@ -1064,11 +1051,60 @@ def toUnicode(usrStr):
             return usrStr
     else:
         try:
-            usrStr = unicode(usrStr, 'utf-8')
+            usrStr = unicode(usrStr, 'utf-8') # @UndefinedVariable  pylint: disable=undefined-variable
         # some documentation may already be in unicode; if so, a TypeException will be raised
         except TypeError: #TypeError: decoding Unicode is not supported
             pass
         return usrStr
+
+def readFileEncodingSafe(filePath, firstGuess='utf-8'):
+    r'''
+    Slow, but will read a file of unknown encoding as safely as possible using
+    the LGPL chardet package in music21.ext.  
+    
+    Let's try to load this file as ascii -- it has a copyright symbol at the top
+    so it won't load in Python3:
+    
+    >>> import os 
+    >>> c = common.getSourceFilePath() + os.sep + 'common.py'
+    >>> f = open(c)
+    >>> #_DOCS_SHOW data = f.read()
+    Traceback (most recent call last):
+    UnicodeDecodeError: 'ascii' codec can't decode byte 0xc2 in position ...: ordinal not in range(128)
+
+    That won't do! now I know that it is in utf-8, but maybe you don't. Or it could
+    be an old humdrum or Noteworthy file with unknown encoding.  This will load it safely.
+    
+    >>> data = common.readFileEncodingSafe(c)
+    >>> data[0:30]
+    u'#-*- coding: utf-8 -*-\n#------'
+    
+    Well, that's nothing, since the first guess here is utf-8 and it's right. So let's
+    give a worse first guess:
+    
+    >>> data = common.readFileEncodingSafe(c, firstGuess='SHIFT_JIS') # old Japanese standard
+    >>> data[0:30]
+    u'#-*- coding: utf-8 -*-\n#------'
+    
+    It worked!
+    
+    Note that this is slow enough if it gets it wrong that the firstGuess should be set
+    to something reasonable like 'ascii' or 'utf-8'.
+    '''
+    import codecs
+    from music21.ext import chardet # encoding detector... @UnresolvedImport
+    try:
+        with codecs.open(filePath, 'r', encoding=firstGuess) as thisFile:
+            data = thisFile.read()
+            return data
+    except OSError: # Python3 FileNotFoundError...
+        raise
+    except UnicodeDecodeError:
+        with codecs.open(filePath, 'rb') as thisFileBinary:
+            dataBinary = thisFileBinary.read()
+            encoding = chardet.detect(dataBinary)['encoding']
+            return codecs.decode(dataBinary, encoding)
+    
 
 
 def classToClassStr(classObj):
@@ -1352,6 +1388,7 @@ def weightedSelection(values, weights, randomGenerator=None):
         q = random.random()
     # normalize weights w/n unit interval
     boundaries = unitBoundaryProportion(weights)
+    i = 0
     for i, (low, high) in enumerate(boundaries):
         if q >= low and q < high: # accepts both boundaries
             return values[i]
@@ -1626,7 +1663,7 @@ def ordinalAbbreviation(value, plural=False):
     if valueHundreths in [11, 12, 13]:
         post = 'th'
     else:
-        valueMod = value % 10;        
+        valueMod = value % 10
         if valueMod == 1:
             post = 'st'
         elif valueMod in [0, 4, 5, 6, 7, 8, 9]:
@@ -1642,7 +1679,7 @@ def ordinalAbbreviation(value, plural=False):
 
 def stripAddresses(textString, replacement = "ADDRESS"):
     '''
-    Function that changes all memory addresses in the given
+    Function that changes all memory addresses (pointers) in the given
     textString with (replacement).  This is useful for testing
     that a function gives an expected result even if the result
     contains references to memory locations.  So for instance:
@@ -1655,8 +1692,16 @@ def stripAddresses(textString, replacement = "ADDRESS"):
 
     >>> common.stripAddresses("{0.0} <music21.humdrum.MiscTandem *>I humdrum control>")
     '{0.0} <music21.humdrum.MiscTandem *>I humdrum control>'
+
+
+    For doctests, can strip to '...' to make it work fine with doctest.ELLIPSIS
+    
+    >>> common.stripAddresses("{0.0} <music21.base.Music21Object object at 0x102a0ff10>", '0x...')
+    '{0.0} <music21.base.Music21Object object at 0x...>'
+
+
     '''
-    ADDRESS = re.compile('0x[0-9A-F]+')
+    ADDRESS = re.compile('0x[0-9A-Fa-f]+')
     return ADDRESS.sub(replacement, textString)
 
 
@@ -1785,7 +1830,7 @@ def strTrimFloat(floatNum, maxNum = 4):
     off = off[0:offLen]
     return off
 
-def dirPartitioned(obj, skipLeading=['__']):
+def dirPartitioned(obj, skipLeading=('__',)):
     '''Given an object, return three lists of names: methods, attributes, and properties.
 
     Note that if a name/attribute is dynamically created by a property it
@@ -1830,46 +1875,17 @@ def getSourceFilePath():
     Get the music21 directory that contains source files. This is not the same as the
     outermost package development directory.
     '''
-    import music21
-    fpMusic21 = music21.__path__[0] # list, get first item
+    import music21 # pylint: disable=redefined-outer-name
+    fpMusic21 = music21.__path__[0] # list, get first item 
     # use corpus as a test case
     if 'stream' not in os.listdir(fpMusic21):
         raise Exception('cannot find expected music21 directory: %s' % fpMusic21)
     return fpMusic21
 
 
-def getBuildDocRstFilePath():
-    '''
-    Return the directory that contains the documentation RST files.
-    '''
-    outer = os.path.dirname(getSourceFilePath())
-    post = os.path.join(outer, 'buildDoc', 'rst')
-    if os.path.exists(post):
-        return post
-    raise Exception('no such path exists: %s' % post)
-
-
-def getBuildDocFilePath():
-    '''Return the directory that contains the documentation RST files.
-    '''
-    outer = os.path.dirname(getSourceFilePath())
-    post = os.path.join(outer, 'buildDoc')
-    if os.path.exists(post):
-        return post
-    raise Exception('no such path exists: %s' % post)
-
-
-def getTestDocsFilePath():
-    '''Return the directory that contains the documentation RST files.
-    '''
-    post = os.path.join(getSourceFilePath(), 'test', 'testDocs')
-    if os.path.exists(post):
-        return post
-    raise Exception('no such path exists: %s' % post)
-
 
 def getMetadataCacheFilePath():
-    '''Get the stored music21 directory that contains the corpus metadata cache.
+    r'''Get the stored music21 directory that contains the corpus metadata cache.
 
     >>> fp = common.getMetadataCacheFilePath()
     >>> fp.endswith('corpus/metadataCache') or fp.endswith(r'corpus\metadataCache')
@@ -1879,8 +1895,7 @@ def getMetadataCacheFilePath():
 
 
 def getCorpusFilePath():
-    '''Get the stored music21 directory that contains the corpus metadata cache.
-
+    r'''Get the stored music21 directory that contains the corpus metadata cache.
 
     >>> fp = common.getCorpusFilePath()
     >>> fp.endswith('music21/corpus') or fp.endswith(r'music21\corpus')
@@ -1934,7 +1949,7 @@ def getPackageDir(fpMusic21=None, relative=True, remapSep='.',
     If `packageOnly` is true, only directories with __init__.py files are colllected.
     '''
     if fpMusic21 == None:
-        import music21
+        import music21 # pylint: disable=redefined-outer-name
         fpMusic21 = music21.__path__[0] # list, get first item
 
     # a test if this is the correct directory
@@ -2005,6 +2020,7 @@ class defaultlist(list):
     True    
     '''
     def __init__(self, fx):
+        list.__init__(self)
         self._fx = fx
     def _fill(self, index):
         while len(self) <= index:
@@ -2018,14 +2034,14 @@ class defaultlist(list):
 
 
 #-----------------------------
-def pitchList(pitchList):
+def pitchList(pitchL):
     '''
     utility method that replicates the previous behavior of lists of pitches
 
 
 
     '''
-    return '[' + ', '.join([x.nameWithOctave for x in pitchList]) + ']'
+    return '[' + ', '.join([x.nameWithOctave for x in pitchL]) + ']'
 
 #-------------------------------------------------------------------------------
 def wrapWeakref(referent):
@@ -2098,7 +2114,7 @@ def findWeakRef(target):
     for attrName in dir(target):
         try:
             attr = getattr(target, attrName)
-        except:
+        except AttributeError:
             print('exception on attribute access: %s' % attrName)
         if isWeakref(attr):
             print('found weakref', attr, attrName, 'of target:', target)
@@ -2137,7 +2153,7 @@ xlateAccents={0xc0:'A', 0xc1:'A', 0xc2:'A', 0xc3:'A', 0xc4:'A', 0xc5:'A',
     }
 
 def stripAccents(inputString):
-    '''
+    r'''
     removes accents from unicode strings.
 
 
@@ -2182,14 +2198,14 @@ def normalizeFilename(name):
         name = name[:lenName -4]
 
     if isinstance(name, str) and six.PY2:
-        name = unicode(name)
+        name = unicode(name) # @UndefinedVariable pylint: disable=undefined-variable
 
     name = unicodedata.normalize('NFKD', name)
     if six.PY2:
         name = name.encode('ascii', 'ignore')
     else:
         name = name.encode('ascii', 'ignore').decode('UTF-8')
-    name = re.sub('[^\w-]', '_', name).strip()
+    name = re.sub(r'[^\w-]', '_', name).strip()
     if extension is not None:
         name += extension
     return name
@@ -2248,6 +2264,7 @@ def addDocAttrTestsToSuite(suite, moduleVariableLists, outerFilename=None, globs
     >>> t
     isRest ()
     '''
+    dtp = doctest.DocTestParser()
     if globs is False:
         globs = __import__('music21').__dict__.copy()
     for lvk in moduleVariableLists:
@@ -2259,7 +2276,7 @@ def addDocAttrTestsToSuite(suite, moduleVariableLists, outerFilename=None, globs
         for dockey in docattr:
             documentation = docattr[dockey]
             #print(documentation)
-            dt = doctest.DocTestParser().get_doctest(documentation, globs, dockey, outerFilename, 0)
+            dt = dtp.get_doctest(documentation, globs, dockey, outerFilename, 0)
             if len(dt.examples) == 0:
                 continue
             dtc = doctest.DocTestCase(dt, optionflags=optionflags)
@@ -2286,17 +2303,17 @@ def fixTestsForPy2and3(doctestSuite):
                     example.exc_msg = "..." + example.exc_msg[1:]
                 elif (example.want is not None and
                         example.want.startswith('u\'')):
-                            # probably a unicode example:
-                            # simplistic, since (u'hi', u'bye')
-                            # won't be caught, but saves a lot of anguish
-                        example.want = example.want[1:]
+                    # probably a unicode example:
+                    # simplistic, since (u'hi', u'bye')
+                    # won't be caught, but saves a lot of anguish
+                    example.want = example.want[1:]
             elif six.PY2:
                 if (example.want is not None and
                         example.want.startswith('b\'')):
-                            # probably a unicode example:
-                            # simplistic, since (b'hi', b'bye')
-                            # won't be caught, but saves a lot of anguish
-                        example.want = example.want[1:]
+                    # probably a unicode example:
+                    # simplistic, since (b'hi', b'bye')
+                    # won't be caught, but saves a lot of anguish
+                    example.want = example.want[1:]
 
 #-------------------------------------------------------------------------------
 _singletonCounter = {}
@@ -2319,7 +2336,23 @@ class SingletonCounter(object):
 #-------------------------------------------------------------------------------
 class SlottedObject(object):
     r'''
-    Provides template for classes implementing slots.
+    Provides template for classes implementing slots allowing it to be pickled
+    properly.
+    
+    Only use SlottedObjects for objects that we expect to make so many of
+    that memory storage and speed become an issue.
+    
+    >>> import pickle
+    >>> class Glissdata(common.SlottedObject):
+    ...     __slots__ = ('time', 'frequency')
+    >>> s = Glissdata
+    >>> s.time = 0.125
+    >>> s.frequency = 440.0
+    >>> #_DOCS_SHOW out = pickle.dumps(s)
+    >>> #_DOCS_SHOW t = pickle.loads(out)
+    >>> t = s #_DOCS_HIDE -- cannot define classes for pickling in doctests
+    >>> t.time, t.frequency
+    (0.125, 440.0)
     '''
     
     ### CLASS VARIABLES ###
@@ -2334,12 +2367,66 @@ class SlottedObject(object):
         for cls in self.__class__.mro():
             slots.update(getattr(cls, '__slots__', ()))
         for slot in slots:
-            state[slot] = getattr(self, slot, None)
+            sValue = getattr(self, slot, None)
+            if sValue is not None and type(sValue) is weakref.ref:
+                sValue = sValue()
+                print("Warning: uncaught weakref found in %r - %s, will not be rewrapped" % (self, slot))
+            state[slot] = sValue
         return state
 
     def __setstate__(self, state):
         for slot, value in state.items():
             setattr(self, slot, value)
+
+#===============================================================================
+# Image functions 
+#===============================================================================
+### Removed because only used by MuseScore and newest versions have -T option...
+# try:
+#     imp.find_module('PIL')
+#     hasPIL = True
+# except ImportError:
+#     hasPIL = False
+# 
+# def cropImageFromPath(fp, newPath=None):
+#     '''
+#     Autocrop an image in place (or at new path) from Path, if PIL is installed and return True,
+#     otherwise return False.  leave a border of size (
+#     
+#     Code from
+#     https://gist.github.com/mattjmorrison/932345
+#     '''
+#     if newPath is None:
+#         newPath = fp
+#     if hasPIL:
+#         from PIL import Image, ImageChops # overhead of reimporting is low compared to imageops
+#         imageObj = Image.open(fp)
+#         imageBox = imageObj.getbbox()
+#         if imageBox:
+#             croppedImg = imageObj.crop(imageBox)
+#         options = {}
+#         if 'transparency' in imageObj.info:
+#             options['transparency'] = imageObj.info["transparency"]
+# #         border = 255 # white border...
+# #         tempBgImage = Image.new(imageObj.mode, imageObj.size, border)
+# #         differenceObj = ImageChops.difference(imageObj, tempBgImage)
+# #         boundingBox = differenceObj.getbbox()
+# #         if boundingBox: # empty images return None...
+# #             croppedImg = imageObj.crop(boundingBox)
+#         croppedImg.save(newPath, **options)
+#         return True
+#         
+# 
+#     else:
+#         from music21 import environment
+#         if six.PY3:
+#             pip = 'pip3'
+#         else:
+#             pip = 'pip'
+#         environLocal = environment.Environment('common.py')        
+#         environLocal.warn('PIL/Pillow is not installed -- "sudo ' + pip + ' install Pillow"')
+#         return False
+#         
 
 
 #-------------------------------------------------------------------------------
@@ -2472,12 +2559,11 @@ class TestMock(object):
             setattr(new, name, newValue)
         return new
 
-    def __copy__(self, memo=None):
+    def __copy__(self):
         self.environLocal.printDebug(['copy called'])
-        return copy.copy(self, memo)
+        return copy.copy(self)
 
     property1 = property(_get1, _set1)
-
     property2 = property(_get1, _set1)
 
 
@@ -2615,9 +2701,8 @@ if __name__ == "__main__":
 #        runner.run(s1)
 
     elif len(sys.argv) > 1:
-        t = Test()
-
-        t.testWeightedSelection()
+        testModule = Test()
+        testModule.testWeightedSelection()
 
 
 #------------------------------------------------------------------------------

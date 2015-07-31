@@ -198,7 +198,7 @@ class Instrument(base.Music21Object):
         self.instrumentId = idNew
          
 
-    def autoAssignMidiChannel(self, usedChannels=[]):
+    def autoAssignMidiChannel(self, usedChannels=[]): # CORRECT! # pylint: disable=dangerous-default-value
         '''
         Assign an unused midi channel given a list of
         used channels.
@@ -385,6 +385,8 @@ class StringInstrument(Instrument):
 
     def __init__(self):
         Instrument.__init__(self)
+        self._stringPitches = None
+        self._cachedPitches = None
         self.instrumentName = 'StringInstrument'
         self.instrumentAbbreviation = 'Str'
 
@@ -1411,7 +1413,7 @@ class Soprano(Vocalist):
         
 class MezzoSoprano(Soprano):
     def __init__(self):
-        Vocalist.__init__(self)
+        Soprano.__init__(self)
         
         self.instrumentName = 'Mezzo-Soprano'
         self.instrumentAbbreviation = 'Mez'
@@ -1503,7 +1505,6 @@ def instrumentFromMidiProgram(number):
     '''
     return the instrument with "number" as its assigned midi program:
     
-    
     >>> instrument.instrumentFromMidiProgram(0)
     <music21.instrument.Instrument Piano>
     >>> instrument.instrumentFromMidiProgram(21)
@@ -1511,9 +1512,7 @@ def instrumentFromMidiProgram(number):
     >>> instrument.instrumentFromMidiProgram(500)
     Traceback (most recent call last):
         ...
-    InstrumentException: No instrument found with given midi program
-
-    
+    InstrumentException: No instrument found with given midi program    
     '''    
     foundInstrument = False
     for myThing in sys.modules[__name__].__dict__.values():
@@ -1523,7 +1522,7 @@ def instrumentFromMidiProgram(number):
             if mp == number:
                 foundInstrument = True
                 return i
-        except:
+        except (AttributeError, TypeError):
             pass
     if not foundInstrument:
         raise InstrumentException('No instrument found with given midi program')
@@ -1539,9 +1538,6 @@ def partitionByInstrument(streamObj):
     >>> p1 = converter.parse("tinynotation: 4/4 c4  d  e  f  g  a  b  c'  c1")
     >>> p2 = converter.parse("tinynotation: 4/4 C#4 D# E# F# G# A# B# c#  C#1")
 
-    >>> p1.makeMeasures(inPlace=True)
-    >>> p2.makeMeasures(inPlace=True)
-
     >>> p1.getElementsByClass('Measure')[0].insert(0.0, instrument.Piccolo())
     >>> p1.getElementsByClass('Measure')[0].insert(2.0, instrument.AltoSaxophone())
     >>> p1.getElementsByClass('Measure')[1].insert(3.0, instrument.Piccolo())
@@ -1554,7 +1550,7 @@ def partitionByInstrument(streamObj):
     >>> s.insert(0, p1)
     >>> s.insert(0, p2)
     >>> s.show('text')
-    {0.0} <music21.tinyNotation.TinyNotationStream ...>
+    {0.0} <music21.stream.Part ...>
         {0.0} <music21.stream.Measure 1 offset=0.0>
             {0.0} <music21.instrument.Instrument Piccolo>
             {0.0} <music21.clef.TrebleClef>
@@ -1573,7 +1569,7 @@ def partitionByInstrument(streamObj):
         {8.0} <music21.stream.Measure 3 offset=8.0>
             {0.0} <music21.note.Note C>
             {4.0} <music21.bar.Barline style=final>
-    {0.0} <music21.tinyNotation.TinyNotationStream ...>
+    {0.0} <music21.stream.Part ...>
         {0.0} <music21.stream.Measure 1 offset=0.0>
             {0.0} <music21.instrument.Instrument Trombone>
             {0.0} <music21.clef.BassClef>
@@ -1792,7 +1788,7 @@ def fromString(instrumentString):
     for substring in allCombinations:
         try:
             if six.PY2:
-                englishName = instrumentLookup.allToBestName[unicode(substring.lower())]
+                englishName = instrumentLookup.allToBestName[unicode(substring.lower())] # pylint: disable=undefined-variable
             else:
                 englishName = instrumentLookup.allToBestName[substring.lower()]
             className = instrumentLookup.bestNameToInstrumentClass[englishName]
@@ -1824,7 +1820,7 @@ def fromString(instrumentString):
     for substring in allCombinations:
         try:
             if six.PY2:
-                bestPitch = instrumentLookup.pitchFullNameToName[unicode(substring.lower())]
+                bestPitch = instrumentLookup.pitchFullNameToName[unicode(substring.lower())] # pylint: disable=undefined-variable
             else:
                 bestPitch = instrumentLookup.pitchFullNameToName[substring.lower()]
             bestInterval = instrumentLookup.transposition[bestName][bestPitch]

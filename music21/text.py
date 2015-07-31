@@ -6,7 +6,7 @@
 # Authors:      Michael Scott Cuthbert
 # Authors:      Christopher Ariza
 #
-# Copyright:    Copyright © 2009-2012 Michael Scott Cuthbert and the music21 Project
+# Copyright:    Copyright © 2009-2012, 2015 Michael Scott Cuthbert and the music21 Project
 # License:      LGPL or BSD, see license.txt
 #-------------------------------------------------------------------------------
 '''
@@ -16,6 +16,7 @@ Utility routines for processing text in scores and other musical objects.
 import unittest
 import os
 import random
+import codecs
 
 #import music21 # needed to properly do isinstance checking
 
@@ -86,9 +87,11 @@ def assembleLyrics(streamIn, lineNumber=1):
         # need to match case of non-defined syllabic attribute
         if lyricObj.text != '_': # continuation syllable in many pieces
             if lyricObj.syllabic in ['begin', 'middle']:
-                word.append(lyricObj.text)
+                if lyricObj.text is not None: # should not be possible but sometimes happens
+                    word.append(lyricObj.text)
             elif lyricObj.syllabic in ['end', 'single', None]:
-                word.append(lyricObj.text)
+                if lyricObj.text is not None: # should not be possible but sometimes happens
+                    word.append(lyricObj.text)
                 #environLocal.printDebug(['word pre-join', word])
                 words.append(''.join(word))
                 word = []
@@ -293,7 +296,7 @@ class TextFormat(object):
         if value is not None:
             try:
                 value = float(value)
-            except (ValueError):
+            except ValueError:
                 raise TextFormatException('Not a supported size: %s' % value)
         self._size = value
 
@@ -316,7 +319,7 @@ class TextFormat(object):
             # convert to number
             try:
                 value = float(value)
-            except (ValueError):
+            except ValueError:
                 raise TextFormatException('Not a supported size: %s' % value)
 
         self._letterSpacing = value
@@ -390,9 +393,10 @@ class TextBox(base.Music21Object, TextFormat):
 
         # the text string to be displayed; not that line breaks
         # are given in the xml with this non-printing character: (#)
+        self._content = None
         self.content = content   # use property
 
-        self._page = 1; # page one is deafault
+        self._page = 1 # page one is deafault
         self._positionDefaultX = x    
         self._positionDefaultY = y
         self._alignVertical = 'top'
@@ -544,12 +548,15 @@ class LanguageDetector(object):
     
     See Trigram docs below...
     '''
-    languageCodes = ['en', 'fr', 'it', 'de', 'cn']
+    languageCodes = ['en', 'fr', 'it', 'de', 'cn', 'la', 'nl']
     languageLong = {'en': 'English',
                     'fr': 'French',
                     'it': 'Italian',
                     'de': 'German',
-                    'cn': 'Chinese',}
+                    'cn': 'Chinese',
+                    'la': 'Latin',
+                    'nl': 'Dutch',
+                    }
     
     def __init__(self, text = None):
         self.text = text
@@ -562,7 +569,7 @@ class LanguageDetector(object):
                                        'languageExcerpts',
                                        languageCode + '.txt')
             
-            with open(thisExcerpt) as f:
+            with codecs.open(thisExcerpt, encoding='utf-8') as f:
                 excerptWords = f.read().split()
                 self.trigrams[languageCode] = Trigram(excerptWords)
             
@@ -576,6 +583,8 @@ class LanguageDetector(object):
         'en'
         >>> ld.mostLikelyLanguage("Ciao come stai? Sono molto lento oggi, ma non so perche.")
         'it'
+        >>> ld.mostLikelyLanguage("Credo in unum deum. Patrem omnipotentem. Factorum celi et terre")
+        'la'
         '''
         excTrigram = Trigram(excerpt)
         maxLang = ""
@@ -606,6 +615,8 @@ class LanguageDetector(object):
         3 it
         4 de
         5 cn
+        6 la
+        7 nl
         >>> numLang = ld.mostLikelyLanguageNumeric("Hello there, how are you doing today? I haven't seen you in a while.")
         >>> numLang
         1
@@ -618,9 +629,8 @@ class LanguageDetector(object):
             langCode = self.mostLikelyLanguage(excerpt)
             for i in range(len(self.languageCodes)):
                 if self.languageCodes[i] == langCode:
-                    return i+1
-            else:
-                raise TextException("got a language that was not in the codes; should not happen")
+                    return i+1            
+            raise TextException("got a language that was not in the codes; should not happen")
 
 #-------------------------------------------------------------------------------
 class Trigram(object):
@@ -683,11 +693,6 @@ class Trigram(object):
         pair = u'  '
         if isinstance(excerpt, list):
             for line in excerpt:
-                if six.PY2:
-                    try:
-                        line = unicode(line, 'utf8') # just in case
-                    except (UnicodeDecodeError, NameError): # no unicode in Py3
-                        continue # skip this line
                 for letter in line.strip() + u' ':
                     d = self.lut.setdefault(pair, {})
                     d[letter] = d.get(letter, 0) + 1
@@ -803,9 +808,7 @@ class Test(unittest.TestCase):
 
 
     def testLanguageDetector(self):
-        from music21 import corpus
         ld = LanguageDetector()
-        ld.trigrams
         #print ld.trigrams['fr'] - ld.trigrams['it'] 
         #print ld.trigrams['fr'] - ld.trigrams['de'] 
         #print ld.trigrams['fr'] - ld.trigrams['cn'] 

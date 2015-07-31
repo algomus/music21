@@ -257,11 +257,38 @@ class Spanner(base.Music21Object):
         msg.append('>')
         return ''.join(msg)
 
+    def _deepcopySubclassable(self, memo=None, ignoreAttributes=None, removeFromIgnore=None):
+        '''
+        see __deepcopy__ for tests and docs
+        '''
+        # NOTE: this is a performance critical operation        
+        defaultIgnoreSet = {'_cache', 'spannerStorage'}
+        if ignoreAttributes is None:
+            ignoreAttributes = defaultIgnoreSet
+        else:
+            ignoreAttributes = ignoreAttributes | defaultIgnoreSet
+
+        new = super(Spanner, self)._deepcopySubclassable(memo, ignoreAttributes, removeFromIgnore)
+
+        if removeFromIgnore is not None:
+            ignoreAttributes = ignoreAttributes - removeFromIgnore
+
+        if 'spannerStorage' in ignoreAttributes:
+            for c in self.spannerStorage:
+                new.spannerStorage.append(c)
+
+        return new
+            
+
     def __deepcopy__(self, memo=None):
         '''
         This produces a new, independent object containing references to the same spannedElements. 
         SpannedElements linked in this Spanner must be manually re-set, likely using the 
         replaceSpannedElement() method.
+        
+        Notice that we put the references to the same object so that later we can replace them;
+        otherwise in a deepcopy of a stream, the notes in the stream
+        will become independent from the notes in the spanner.
 
         >>> import copy
         >>> n1 = note.Note('g')
@@ -283,36 +310,7 @@ class Spanner(base.Music21Object):
         >>> sp2[0] is n1
         True
         '''
-        new = self.__class__()
-        old = self
-        for name in self.__dict__:
-            if name.startswith('__'):
-                continue
-            if name == '_cache':
-                continue
-            part = getattr(self, name)
-            # functionality duplicated from Music21Object
-            if name == '_activeSite':
-                #environLocal.printDebug(['creating parent reference'])
-                # keep a reference, not a deepcopy
-                setattr(new, name, self.activeSite)
-            elif name == 'sites':
-                newValue = copy.deepcopy(part, memo)
-                newValue.containedById = id(new)
-                setattr(new, name, newValue)
-
-            # do not deepcopy spannerStorage, as this will copy the 
-            # contained objects
-            elif name == 'spannerStorage':
-                for c in old.spannerStorage:
-                    new.spannerStorage.append(c)
-            else: 
-                #environLocal.printDebug(['Spanner.__deepcopy__', name])
-                newValue = copy.deepcopy(part, memo)
-                setattr(new, name, newValue)
-        # do after all other copying
-        new._idLastDeepCopyOf = id(self)
-        return new
+        return self._deepcopySubclassable(memo)
 
     #---------------------------------------------------------------------------
     # as spannedElements is private Stream, unwrap/wrap methods need to override
@@ -326,7 +324,7 @@ class Spanner(base.Music21Object):
     def purgeLocations(self, rescanIsDead=False):
         # must override Music21Object to purge locations from the contained
         # Stream
-        # base method to perform purge on the Sream
+        # base method to perform purge on the Stream
         self.spannerStorage.purgeLocations(rescanIsDead=rescanIsDead)
         base.Music21Object.purgeLocations(self, rescanIsDead=rescanIsDead)
 
@@ -1087,10 +1085,65 @@ class SpannerBundle(object):
             idLocal).getByCompleteStatus(completeStatus)
 
     def setPendingSpannedElementAssignment(self, sp, className):
+        '''
+        Sets that a particular spanner (sp) is looking for an element of
+        class (className) to complete it.
+        
+        >>> n1 = note.Note('C')
+        >>> r1 = note.Rest()
+        >>> n2 = note.Note('D')
+        >>> n3 = note.Note('E')
+        >>> su1 = spanner.Slur([n1])
+        >>> sb = spanner.SpannerBundle()
+        >>> sb.append(su1)
+        >>> su1.getSpannedElements()
+        [<music21.note.Note C>]
+
+        >>> n1.getSpannerSites()
+        [<music21.spanner.Slur <music21.note.Note C>>]
+
+        Now set up su1 to get the next note assigned to it.
+        
+        >>> sb.setPendingSpannedElementAssignment(su1, 'Note')
+
+        Call freePendingSpannedElementAssignment to attach.
+        Should not get a rest...
+    
+        >>> sb.freePendingSpannedElementAssignment(r1)
+        >>> su1.getSpannedElements()
+        [<music21.note.Note C>]
+        
+        But will get the next note:
+        
+        >>> sb.freePendingSpannedElementAssignment(n2)
+        >>> su1.getSpannedElements()
+        [<music21.note.Note C>, <music21.note.Note D>]        
+        
+        >>> n2.getSpannerSites()
+        [<music21.spanner.Slur <music21.note.Note C><music21.note.Note D>>]
+        
+        And now that the assignment has been made, the pending assignment
+        has been cleared, so n3 will not get assigned to the slur:
+        
+
+        >>> sb.freePendingSpannedElementAssignment(n3)
+        >>> su1.getSpannedElements()
+        [<music21.note.Note C>, <music21.note.Note D>]        
+        
+        >>> n3.getSpannerSites()
+        []
+        
+        '''
         ref = {'spanner':sp, 'className':className}
         self._pendingSpannedElementAssignment.append(ref)
 
     def freePendingSpannedElementAssignment(self, spannedElementCandidate):
+        '''
+        Assigns and frees up a pendingSpannedElementAssignment if one is
+        active and the candidate matches the class.  See 
+        setPendingSpannedElementAssignment for documentation and tests.
+        '''
+        
         if len(self._pendingSpannedElementAssignment) == 0:
             return
 
@@ -1372,17 +1425,22 @@ class Ottava(Spanner):
     def _getShiftMagnitude(self):
         '''Get basic parameters of shift.
         '''
-        if self._type.startswith('8'): return 8
-        elif self._type.startswith('15'): return 15
-        else: raise SpannerException("Cannot get shift magnitude from %s" % self._type)
+        if self._type.startswith('8'): 
+            return 8
+        elif self._type.startswith('15'): 
+            return 15
+        else: 
+            raise SpannerException("Cannot get shift magnitude from %s" % self._type)
 
     def _getShiftDirection(self):
         '''Get basic parameters of shift.
         '''
         # an 8va means that the notes must be shifted down with the mark
-        if self._type.endswith('a'): return 'down'
+        if self._type.endswith('a'): 
+            return 'down'
         # an 8vb means that the notes must be shifted upward with the mark
-        if self._type.endswith('b'): return 'up'
+        if self._type.endswith('b'): 
+            return 'up'
 
     def getStartParameters(self):
         '''
@@ -1783,6 +1841,7 @@ class Test(unittest.TestCase):
         self.assertEqual(sb2[0], su3)
         self.assertEqual(sb2[1], su4)
         
+
 
     def testDeepcopySpanner(self):
         from music21 import spanner, note
@@ -2347,7 +2406,6 @@ class Test(unittest.TestCase):
 #         #s.show()
 #         raw = s.musicxml
 #         self.assertEqual(raw.count('<dashes'), 4)
-        
 
     def testOneElementSpanners(self):
         from music21 import note, spanner
@@ -2402,7 +2460,105 @@ class Test(unittest.TestCase):
         p.insert(0, sl)
         unused_data = converter.freezeStr(p, fmt='pickle')
 
+    def testDeepcopyJustSpannerAndNotes(self):
+        from music21 import note, clef
+        n1 = note.Note('g')
+        n2 = note.Note('f#')
+        c1 = clef.AltoClef()
 
+        sp1 = Spanner(n1, n2, c1)
+        sp2 = copy.deepcopy(sp1)
+        self.assertEqual(len(sp2.spannerStorage), 3)
+        self.assertIsNot(sp1, sp2)
+        self.assertIs(sp2[0], sp1[0])
+        self.assertIs(sp2[2], sp1[2])
+        self.assertIs(sp1[0], n1)
+        self.assertIs(sp2[0], n1)
+
+    def testDeepcopySpannerInStreamNotNotes(self):
+        from music21 import note, clef, stream
+        n1 = note.Note('g')
+        n2 = note.Note('f#')
+        c1 = clef.AltoClef()
+
+        sp1 = Spanner(n1, n2, c1)
+        st1 = stream.Stream()
+        st1.insert(0.0, sp1)
+        st2 = copy.deepcopy(st1)
+
+        sp2 = st2.spanners[0]
+        self.assertEqual(len(sp2.spannerStorage), 3)
+        self.assertIsNot(sp1, sp2)
+        self.assertIs(sp2[0], sp1[0])
+        self.assertIs(sp2[2], sp1[2])
+        self.assertIs(sp1[0], n1)
+        self.assertIs(sp2[0], n1)
+        
+    def testDeepcopyNotesInStreamNotSpanner(self):
+        from music21 import note, clef, stream
+        n1 = note.Note('g')
+        n2 = note.Note('f#')
+        c1 = clef.AltoClef()
+
+        sp1 = Spanner(n1, n2, c1)
+        st1 = stream.Stream()
+        st1.insert(0.0, n1)
+        st1.insert(1.0, n2)
+        st2 = copy.deepcopy(st1)
+
+        n3 = st2.notes[0]
+        self.assertEqual(len(n3.getSpannerSites()), 1)
+        sp2 = n3.getSpannerSites()[0]
+        self.assertIs(sp1, sp2)
+        self.assertIsNot(n1, n3)
+        self.assertIs(sp2[2], sp1[2])
+        self.assertIs(sp1[0], n1)
+        self.assertIs(sp2[0], n1)
+
+
+    def testDeepcopyNotesAndSpannerInStream(self):
+        from music21 import note, stream
+        n1 = note.Note('g')
+        n2 = note.Note('f#')
+
+        sp1 = Spanner(n1, n2)
+        st1 = stream.Stream()
+        st1.insert(0.0, sp1)
+        st1.insert(0.0, n1)
+        st1.insert(1.0, n2)
+        st2 = copy.deepcopy(st1)
+
+        n3 = st2.notes[0]
+        self.assertEqual(len(n3.getSpannerSites()), 1)
+        sp2 = n3.getSpannerSites()[0]
+        self.assertIsNot(sp1, sp2)
+        self.assertIsNot(n1, n3)
+        
+        sp3 = st2.spanners[0]
+        self.assertIs(sp2, sp3)
+        self.assertIs(sp1[0], n1)
+        self.assertIs(sp2[0], n3)
+
+    def testDeepcopyStreamWithSpanners(self):
+        from music21 import note, stream
+        n1 = note.Note()
+        su1 = Slur((n1,))
+        s = stream.Stream()
+        s.insert(0.0, su1)
+        s.insert(0.0, n1)
+        self.assertIs(s.spanners[0].getFirst(), n1)
+        self.assertIs(s.notes[0].getSpannerSites()[0], su1)
+
+        t = copy.deepcopy(s)
+        su2 = t.spanners[0]
+        n2 = t.notes[0]
+        self.assertIsNot(su2, su1)
+        self.assertIsNot(n2, n1)
+        self.assertIs(t.spanners[0].getFirst(), n2)
+        self.assertIs(t.notes[0].getSpannerSites()[0], su2)
+        self.assertIsNot(s.notes[0].getSpannerSites()[0], su2)
+
+        
 #-------------------------------------------------------------------------------
 # define presented order in documentation
 _DOC_ORDER = [Spanner]
@@ -2410,6 +2566,8 @@ _DOC_ORDER = [Spanner]
 
 if __name__ == "__main__":
     # sys.arg test options will be used in mainTest()
+    #import sys
+    #sys.argv.append('testDeepcopyNotesAndSpannerInStream')
     import music21
     music21.mainTest(Test)
 

@@ -18,8 +18,8 @@ import re
 import math
 
 try:
-    from urllib import FancyURLopener # @UnusedImport
-    from urllib import urlencode # @UnusedImport
+    from urllib import FancyURLopener # @UnusedImport @UnresolvedImport
+    from urllib import urlencode # @UnusedImport @UnresolvedImport
 except: # python3
     from urllib.request import FancyURLopener # @UnresolvedImport @Reimport
     from urllib.parse import urlencode # @UnresolvedImport @Reimport
@@ -154,6 +154,12 @@ class TonalCertainty(featuresModule.FeatureExtractor):
     >>> f.vector
     [1.26...]
 
+    >>> pitches = [56, 55, 56, 57, 58, 57, 58, 59, 60, 59, 60, 61, 62, 61, 62, 63, 64, 63, 64, 65, 66, 65, 66, 67]
+    >>> s = stream.Stream()
+    >>> for pitch in pitches:
+    ...   s.append(note.Note(pitch))
+    >>> features.native.TonalCertainty(s).extract().vector
+    [0.0]
     '''
     id = 'K1' # TODO: need id
     def __init__(self, dataOrStream=None, *arguments, **keywords):
@@ -765,7 +771,7 @@ class ChordBassMotionFeature(featuresModule.FeatureExtractor):
 class URLOpenerUI(FancyURLopener):
     version = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11'
 
-googleResultsRE = re.compile('([\d\,]+) results')
+googleResultsRE = re.compile(r'([\d\,]+) results')
 
 class ComposerPopularity(featuresModule.FeatureExtractor):
     '''
@@ -877,7 +883,8 @@ class LandiniCadence(featuresModule.FeatureExtractor):
                     if cListClean[-len(cMatch):] == cMatch:
                         found = True
                         break
-            if found: break
+            if found: 
+                break
         if found:
             self._feature.vector[0] = 1
 

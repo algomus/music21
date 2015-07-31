@@ -72,7 +72,7 @@ class Clef(base.Music21Object):
         self.line = None
         self.octaveChange = 0 # set to zero as default
         # musicxml has an attribute for clefOctaveChange, 
-        # an integer to show transposing clefs
+        # an integer to show transposing clef
 
     def __repr__(self):
         # get just the clef name of this instance
@@ -487,7 +487,7 @@ def clefFromString(clefString, octaveShift = 0):
         clefObj.line = lineNum
 
     if octaveShift != 0:
-        clefObj.octaveShift = octaveShift
+        clefObj.octaveChange = octaveShift
     
     return clefObj
 

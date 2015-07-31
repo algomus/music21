@@ -591,7 +591,7 @@ spirit</words>
 
         out = fromMusic21Object(n)
         match1 = '<notehead>diamond</notehead>'
-        self.assertEqual(out.find(match1) > 0, True)
+        self.assertEqual(out.find(match1) > 0, True, out)
 
     def testNoteheadSmorgasbord(self):
         # tests the of many different types of noteheads
@@ -680,7 +680,7 @@ spirit</words>
         n1.tie = tie.Tie('start')
         n2 = note.Note('c3')
         n2.notehead = 'cross'
-        n2.tie = tie.Tie('end')
+        n2.tie = tie.Tie('stop')
         p = stream.Part()
         p.append(n1)
         p.append(n2)

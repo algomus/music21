@@ -75,8 +75,9 @@ def rhythmicSearch(thisStream, searchStream):
     Example 1: First we will set up a simple stream for searching:
     
     
-    >>> thisStream = tinyNotation.TinyNotationStream("3/4 c4. d8 e4 g4. a8 f4. c4.")
+    >>> thisStream = converter.parse("tinynotation: 3/4 c4. d8 e4 g4. a8 f4. c4.").flat
     >>> thisStream.show('text')
+    {0.0} <music21.clef.TrebleClef>
     {0.0} <music21.meter.TimeSignature 3/4>
     {0.0} <music21.note.Note C>
     {1.5} <music21.note.Note D>
@@ -85,7 +86,8 @@ def rhythmicSearch(thisStream, searchStream):
     {4.5} <music21.note.Note A>
     {5.0} <music21.note.Note F>
     {6.5} <music21.note.Note C>    
-    
+    {8.0} <music21.bar.Barline style=final>
+        
     Now we will search for all dotted-quarter/eighth elements in the Stream:
     
     >>> searchStream1 = stream.Stream()
@@ -93,8 +95,8 @@ def rhythmicSearch(thisStream, searchStream):
     >>> searchStream1.append(note.Note(quarterLength = .5))
     >>> l = search.rhythmicSearch(thisStream, searchStream1)
     >>> l
-    [1, 4]
-    >>> stream.Stream(thisStream[4:6]).show('text')
+    [2, 5]
+    >>> stream.Stream(thisStream[5:7]).show('text')
     {3.0} <music21.note.Note G>
     {4.5} <music21.note.Note A>
     
@@ -111,7 +113,7 @@ def rhythmicSearch(thisStream, searchStream):
     >>> searchStream2.append(note.Note(quarterLength = 1.5))
     >>> l = search.rhythmicSearch(thisStream, searchStream2)
     >>> l
-    [2, 5]
+    [3, 6]
     >>> for found in l:
     ...     thisStream[found].lyric = "*"
     >>> #_DOCS_SHOW thisStream.show()
@@ -434,8 +436,7 @@ def translateDiatonicStreamToString(inputStream, previousRest=False, previousTie
 def translateStreamToStringNoRhythm(inputStream):
     '''
     takes a stream of notesAndRests only and returns
-    a string for searching on.
-    
+    a string for searching on, using translateNoteToByte.
     
     >>> s = converter.parse("tinynotation: 4/4 c4 d e FF a' b-")
     >>> sn = s.flat.notesAndRests
@@ -470,15 +471,18 @@ def translateStreamToStringOnlyRhythm(inputStream):
   
 def translateNoteToByte(n):
     '''
-    takes a note.Note object and translates it to a single byte representation
+    takes a note.Note object and translates it to a single byte representation.
 
     currently returns the chr() for the note's midi number. or chr(127) for rests
     
     
     >>> n = note.Note("C4")
-    >>> search.translateNoteToByte(n)
+    >>> b = search.translateNoteToByte(n)
+    >>> b
     '<'
-    >>> ord(search.translateNoteToByte(n)) == n.midi
+    >>> ord(b) 
+    60
+    >>> ord(b) == n.midi
     True
 
     Chords are currently just searched on the first note (or treated as a rest if none)
@@ -493,13 +497,13 @@ def translateNoteToByte(n):
     else:
         return chr(n.midi)
 
-def translateNoteWithDurationToBytes(n):
+def translateNoteWithDurationToBytes(n, includeTieByte=True):
     '''
     takes a note.Note object and translates it to a three-byte representation.
     
     currently returns the chr() for the note's midi number. or chr(127) for rests
     followed by the log of the quarter length (fitted to 1-127, see formula below)
-    followed by 's', 'c', or 'e' if includetieByte is True and there is a tie
+    followed by 's', 'c', or 'e' if includeTieByte is True and there is a tie
 
     
     >>> n = note.Note("C4")
@@ -514,6 +518,11 @@ def translateNoteWithDurationToBytes(n):
     >>> trans = search.translateNoteWithDurationToBytes(n)
     >>> trans
     '<_e'
+
+    >>> trans = search.translateNoteWithDurationToBytes(n, includeTieByte=False)
+    >>> trans
+    '<_'
+
     
     '''
     firstByte = translateNoteToByte(n)
@@ -525,8 +534,10 @@ def translateNoteWithDurationToBytes(n):
     secondByte = chr(duration1to127)
     
     thirdByte = translateNoteTieToByte(n)
-    
-    return firstByte + secondByte + thirdByte
+    if includeTieByte is True:
+        return firstByte + secondByte + thirdByte
+    else:
+        return firstByte + secondByte
 
 def translateNoteTieToByte(n):
     '''

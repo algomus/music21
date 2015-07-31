@@ -14,8 +14,12 @@ Users Guide
    usersGuide_06_stream2
    usersGuide_07_chords
    usersGuide_09_chordify
+   usersGuide_10_fileFormats1
    usersGuide_11_corpusSearching
    usersGuide_14_timeSignatures
    usersGuide_17_derivations
    usersGuide_21_sorting
+   usersGuide_22_graphing
+   usersGuide_25_postTonalTools1
    usersGuide_54_extendingConverter
+   usersGuide_55_advancedMeter

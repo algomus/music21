@@ -16,6 +16,8 @@ musicxml.mxObject representation.
 import unittest
 import copy
 
+from music21.ext import webcolors
+
 from music21.musicxml import mxObjects
 
 from music21 import common
@@ -44,6 +46,12 @@ class ToMxObjectsException(exceptions21.Music21Exception):
 class NoteheadException(ToMxObjectsException):
     pass
 
+def normalizeColor(color):
+    if color in (None, ''):
+        return color
+    if '#' not in color:
+        return (webcolors.css3_names_to_hex[color]).upper()
+    return color 
 
 def configureMxPartGroupFromStaffGroup(staffGroup):
     '''
@@ -1306,8 +1314,8 @@ def articulationsAndExpressionsToMx(target, mxNoteList):
 def fermataToMxFermata(fermata):
     '''
     Convert an expressions.Fermata object to a musicxml.mxObject.Fermata
-    object.  Note that the default musicxml is inverted fermatas -- those are what most of us think of as 'upright' fermatas
-    
+    object.  Note that the default musicxml is inverted fermatas -- 
+    those are what most of us think of as 'upright' fermatas
     
     >>> fermata = expressions.Fermata()
     >>> fermata.type
@@ -1625,7 +1633,7 @@ def noteheadToMxNotehead(obj, defaultColor=None):
 
     >>> n1 = note.Note('c3')
     >>> n1.notehead = 'diamond'
-    >>> n1.noteheadParenthesis = 'yes'
+    >>> n1.noteheadParenthesis = True
     >>> n1.noteheadFill = 'no'
     >>> mxN4 = musicxml.toMxObjects.noteheadToMxNotehead(n1)
     >>> mxN4._attr['filled']
@@ -1646,8 +1654,20 @@ def noteheadToMxNotehead(obj, defaultColor=None):
     if hasattr(obj, 'noteheadParenthesis'):
         nhParen = obj.noteheadParenthesis
 
+    if nhParen is True:
+        nhParen = 'yes'    
+
+    if nhFill is True:
+        nhFill = 'yes'
+    elif nhFill is False:
+        nhFill = 'no'
+
+
     if nh not in note.noteheadTypeNames:
-        raise NoteheadException('This notehead type is not supported by MusicXML: "%s"' % nh)
+        if nh is None:
+            nh = 'none'
+        else:
+            raise NoteheadException('This notehead type is not supported by MusicXML: "%s"' % nh)
     else:
         # should only set if needed, otherwise creates extra musicxl  data
         #if nh not in ['normal']: 
@@ -1657,7 +1677,8 @@ def noteheadToMxNotehead(obj, defaultColor=None):
     if nhParen is not False:
         mxNotehead.set('parentheses', nhParen)
     if obj.color not in [None, '']:
-        mxNotehead.set('color', obj.color)
+        color = normalizeColor(obj.color)
+        mxNotehead.set('color', color)
     return mxNotehead
 
 def noteToMxNotes(n, spannerBundle=None):
@@ -1697,7 +1718,7 @@ def noteToMxNotes(n, spannerBundle=None):
 
     mxNoteList = []
     pitchMx = pitchToMx(n.pitch)
-    noteColor = n.color
+    noteColor = normalizeColor(n.color)
 
     # todo: this is not yet implemented in music21 note objects; to do
     #mxNotehead = mxObjects.Notehead()
@@ -1774,22 +1795,42 @@ def noteToMxNotes(n, spannerBundle=None):
 
 
 
-def restToMxNotes(r):
+def restToMxNotes(r, spannerBundle=None):
     '''Translate a :class:`~music21.note.Rest` to a MusicXML :class:`~music21.musicxml.mxObjects.Note` object 
     configured with a :class:`~music21.musicxml.mxObjects.Rest`.
     '''
+    if spannerBundle is not None and len(spannerBundle) > 0:
+        # this will get all spanners that participate with this note
+        # get a new spanner bundle that only has spanned elements relevant to this 
+        # note.
+        spannerBundle = spannerBundle.getBySpannedElement(r)
+        #environLocal.printDebug(['noteToMxNotes(): spannerBundle post-filter by spannedElement:', spannerBundle, n, id(n)])
+
     mxNoteList = []
     for mxNote in durationToMx(r.duration): # returns a list of mxNote objs
         # merge method returns a new object
         mxRest = mxObjects.Rest()
         mxRest.setDefaults()
         mxNote.set('rest', mxRest)
-        # get color from within .editorial using attribute
-        mxNote.set('color', r.color)
+        # TODO: get color from within .editorial using attribute or delete .editorial...
+        mxNote.set('color', normalizeColor(r.color))
+
         if r.hideObjectOnPrint == True:
             mxNote.set('printObject', "no")
             mxNote.set('printSpacing', "yes")
         mxNoteList.append(mxNote)
+    articulationsAndExpressionsToMx(r, mxNoteList)
+
+    # some spanner produce direction tags, and sometimes these need
+    # to go before or after the notes of this element
+    mxDirectionPre = []
+    mxDirectionPost = []
+    # will update and fill all lists passed in as args
+    spannersToMx(r, mxNoteList, mxDirectionPre, mxDirectionPost, spannerBundle)
+
+    return mxDirectionPre + mxNoteList + mxDirectionPost
+    
+    
     return mxNoteList
 
 
@@ -1809,7 +1850,7 @@ def measureToMx(m, spannerBundle=None, mxTranspose=None):
         rbSpanners = [] # for size comparison
 
     mxMeasure = mxObjects.Measure()
-    mxMeasure.set('number', m.number)
+    mxMeasure.set('number', m.measureNumberWithSuffix())
     if m.layoutWidth is not None:
         mxMeasure.set('width', m.layoutWidth)
 
@@ -1942,9 +1983,9 @@ def measureToMx(m, spannerBundle=None, mxTranspose=None):
 
                     ## returns a list of note objects...
                     if 'Note' in classes:
-                        objList = noteToMxNotes(obj)
+                        objList = noteToMxNotes(obj, spannerBundle=spannerBundle)
                     elif 'Rest' in classes:
-                        objList = restToMxNotes(obj)
+                        objList = restToMxNotes(obj, spannerBundle=spannerBundle)
                     elif 'Unpitched' in classes:
                         environLocal.warn("skipping Unpitched object")
                     # need to set voice for each contained mx object
@@ -2045,6 +2086,11 @@ def measureToMx(m, spannerBundle=None, mxTranspose=None):
                 mxDirection.offset = mxOffset
                 # place at zero position, as offset value determines horizontal position, not location amongst notes
                 mxMeasure.insert(0, mxDirection)
+            elif 'Clef' in classes and obj.offset != 0.0:
+                # clef within bar
+                clefAttributes = mxObjects.Attributes()
+                clefAttributes.clefList = [clefToMxClef(obj)]
+                mxMeasure.componentList.append(clefAttributes)
             else: # other objects may have already been added
                 pass
                 #environLocal.printDebug(['mesureToMx of Measure is not processing', obj])
@@ -2167,7 +2213,7 @@ def streamPartToMx(part, instStream=None, meterStream=None,
             # if making beams, have to make a deep copy, as modifying notes
             try:
                 measureStream.makeBeams(inPlace=True)
-            except: # cannot match StreamException, must catch all
+            except exceptions21.StreamException: 
                 pass
         if spannerBundle is None:
             spannerBundle = spanner.SpannerBundle(measureStream.flat)
@@ -2392,6 +2438,7 @@ def streamToMx(s, spannerBundle=None):
         # add score part
         mxPartList.append(mxScorePart)
         # check for last
+        activeIndex = None
         for sg in staffGroups:
             if sg.isLast(p):
                 # find the spanner in the dictionary already-assigned
@@ -2401,7 +2448,8 @@ def streamToMx(s, spannerBundle=None):
                         break
                 mxPartGroup = mxObjects.PartGroup()
                 mxPartGroup.set('type', 'stop')
-                mxPartGroup.set('number', activeIndex)
+                if activeIndex is not None:
+                    mxPartGroup.set('number', activeIndex)
                 mxPartList.append(mxPartGroup)
 
     # addition of parts must simply be in the same order as above

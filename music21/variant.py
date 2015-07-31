@@ -23,12 +23,12 @@ import copy
 import difflib
 
 from music21 import base
-from music21 import exceptions21
 from music21 import common
-from music21 import stream
 from music21 import environment
+from music21 import exceptions21
 from music21 import note
 from music21 import search
+from music21 import stream
 
 _MOD = "variant.py"
 environLocal = environment.Environment(_MOD)
@@ -36,38 +36,103 @@ environLocal = environment.Environment(_MOD)
 
 
 #-------Public Merge Functions
-def mergeVariants(streamX, streamY, variantName = 'variant', inPlace = False):
+def mergeVariants(streamX, streamY, variantName='variant', inPlace=False):
     '''
-    Takes two streams objects or their derivatives (score, part, measure, etc.) which should be variant versions of the same stream,
-    and merges them (determines differences and stores those differences as variant objects in streamX) via the appropriate merge
-    function for their type. This will not know how to deal with scores meant for mergePartAsOssia(). If this is the intention, use
+    Takes two streams objects or their derivatives (Score, Part, Measure, etc.) which 
+    should be variant versions of the same stream,
+    and merges them (determines differences and stores those differences as variant objects 
+    in streamX) via the appropriate merge
+    function for their type. This will not know how to deal with scores meant for 
+    mergePartAsOssia(). If this is the intention, use
     that function instead.
+
+
+    >>> streamX = converter.parse("tinynotation: 4/4 a4 b  c d", makeNotation=False)
+    >>> streamY = converter.parse("tinynotation: 4/4 a4 b- c e", makeNotation=False)
+
+    >>> mergedStream = variant.mergeVariants(streamX, streamY, variantName = 'docvariant', inPlace = False)
+    >>> mergedStream.show('text')
+    {0.0} <music21.meter.TimeSignature 4/4>
+    {0.0} <music21.note.Note A>
+    {1.0} <music21.variant.Variant object of length 1.0>
+    {1.0} <music21.note.Note B>
+    {2.0} <music21.note.Note C>
+    {3.0} <music21.variant.Variant object of length 1.0>
+    {3.0} <music21.note.Note D>
+    
+    >>> v0 = mergedStream.getElementsByClass('Variant')[0]
+    >>> v0
+    <music21.variant.Variant object of length 1.0>
+    >>> v0[0]
+    <music21.note.Note B->   
+    
+    >>> streamZ = converter.parse("tinynotation: 4/4 a4 b c d e f g a", makeNotation=False)
+    >>> variant.mergeVariants(streamX, streamZ, variantName = 'docvariant', inPlace=False)
+    Traceback (most recent call last):
+    ...
+    VariantException: Could not determine what merging method to use. Try using a more specific merging function.
     
     
-    >>> aScore, vScore= stream.Score(), stream.Score()
+    Example: Create a main score (aScore) and a variant score (vScore), each with two parts (ap1/vp1
+    and ap2/vp2) and some small variants between ap1/vp1 and ap2/vp2, marked with * below.
     
-    >>> ap1 = stream.Part(converter.parse("tinynotation: 4/4   a4 b c d    e2 f2   g2 f4 g4 ").makeMeasures())
-    >>> vp1 = stream.Part(converter.parse("tinynotation: 4/4   a4 b c e    e2 f2   g2 f4 a4 ").makeMeasures())
+    >>> aScore = stream.Score()
+    >>> vScore = stream.Score()
+
+    >>> #                                                             *
+    >>> ap1 = stream.Part(converter.parse("tinynotation: 4/4   a4 b c d    e2 f   g2 f4 g ").makeMeasures())
+    >>> vp1 = stream.Part(converter.parse("tinynotation: 4/4   a4 b c e    e2 f   g2 f4 a ").makeMeasures())
+        
+    >>> #                                                                     *    *    *
+    >>> ap2 = stream.Part(converter.parse("tinynotation: 4/4   a4 g f e    f2 e   d2 g4 f ").makeMeasures())
+    >>> vp2 = stream.Part(converter.parse("tinynotation: 4/4   a4 g f e    f2 g   f2 g4 d ").makeMeasures())
     
-    >>> ap2 = stream.Part(converter.parse("tinynotation: 4/4   a4 g f e    f2 e2   d2 g4 f4 ").makeMeasures())
-    >>> vp2 = stream.Part(converter.parse("tinynotation: 4/4   a4 g f e    f2 g2   f2 g4 d4 ").makeMeasures())
+    >>> ap1.id = 'aPart1'
+    >>> ap2.id = 'aPart2'
     
     >>> aScore.insert(0.0, ap1)
     >>> aScore.insert(0.0, ap2)
     >>> vScore.insert(0.0, vp1)
     >>> vScore.insert(0.0, vp2)
+
+    Create one merged score where everything different in vScore from aScore is called a variant.
     
-    >>> mergedScore = variant.mergeVariants(aScore, vScore, variantName = 'docvariant', inPlace = False)
+    >>> mergedScore = variant.mergeVariants(aScore, vScore, variantName='docvariant', inPlace=False)
     >>> mergedScore.show('text')
-    {0.0} <music21.stream.Part ...>
+    {0.0} <music21.stream.Part aPart1>
         {0.0} <music21.variant.Variant object of length 4.0>
-    ...
-    {0.0} <music21.stream.Part ...>
         {0.0} <music21.stream.Measure 1 offset=0.0>
-    ...
+            {0.0} <music21.clef.TrebleClef>
+            {0.0} <music21.meter.TimeSignature 4/4>
+            {0.0} <music21.note.Note A>
+            {1.0} <music21.note.Note B>
+            {2.0} <music21.note.Note C>
+            {3.0} <music21.note.Note D>
+        {4.0} <music21.stream.Measure 2 offset=4.0>
+            {0.0} <music21.note.Note E>
+            {2.0} <music21.note.Note F>
+        {8.0} <music21.variant.Variant object of length 4.0>
+        {8.0} <music21.stream.Measure 3 offset=8.0>
+            {0.0} <music21.note.Note G>
+            {2.0} <music21.note.Note F>
+            {3.0} <music21.note.Note G>
+            {4.0} <music21.bar.Barline style=final>
+    {0.0} <music21.stream.Part aPart2>
+        {0.0} <music21.stream.Measure 1 offset=0.0>
+            {0.0} <music21.clef.TrebleClef>
+            {0.0} <music21.meter.TimeSignature 4/4>
+            {0.0} <music21.note.Note A>
+            {1.0} <music21.note.Note G>
+            {2.0} <music21.note.Note F>
+            {3.0} <music21.note.Note E>
         {4.0} <music21.variant.Variant object of length 8.0>
         {4.0} <music21.stream.Measure 2 offset=4.0>
-    ...
+            {0.0} <music21.note.Note F>
+            {2.0} <music21.note.Note E>
+        {8.0} <music21.stream.Measure 3 offset=8.0>
+            {0.0} <music21.note.Note D>
+            {2.0} <music21.note.Note G>
+            {3.0} <music21.note.Note F>
             {4.0} <music21.bar.Barline style=final>
     
     
@@ -80,29 +145,12 @@ def mergeVariants(streamX, streamY, variantName = 'variant', inPlace = False):
     ...
         {4.0} <music21.bar.Barline style=final>
     
-    >>> streamX = converter.parse("tinynotation: 4/4 a4 b c d")
-    >>> streamY = converter.parse("tinynotation: 4/4 a4 d c b")
-    >>> mergedStream = variant.mergeVariants(streamX, streamY, variantName = 'docvariant', inPlace = False)
-    >>> mergedStream.show('text')
-    {0.0} <music21.meter.TimeSignature 4/4>
-    {0.0} <music21.note.Note A>
-    {1.0} <music21.variant.Variant object of length 1.0>
-    {1.0} <music21.note.Note B>
-    {2.0} <music21.note.Note C>
-    {3.0} <music21.variant.Variant object of length 1.0>
-    {3.0} <music21.note.Note D>
-    
-    >>> streamY = converter.parse("tinynotation: 4/4 a4 b c d e f g a")
-    >>> variant.mergeVariants(streamX, streamY, variantName = 'docvariant', inPlace = False)
-    Traceback (most recent call last):
-    ...
-    VariantException: Could not determine what merging method to use. Try using a more specific merging function.
     
     '''
     classesX = streamX.classes
     if "Score" in classesX:
         return mergeVariantScores(streamX, streamY, variantName, inPlace = inPlace)
-    elif "Part" in classesX or len(streamX.getElementsByClass("Measure")) > 0:
+    elif len(streamX.getElementsByClass("Measure")) > 0:
         return mergeVariantMeasureStreams(streamX, streamY, variantName, inPlace = inPlace)
     elif len(streamX.notesAndRests) > 0 and streamX.duration.quarterLength == streamY.duration.quarterLength:
         return mergeVariantsEqualDuration([streamX, streamY], [variantName], inPlace = inPlace)
@@ -565,7 +613,7 @@ def mergeVariantsEqualDuration(streams, variantNames, inPlace = False):
     while len(streams) > len(variantNames): # Adds Blank names if too few
         variantNames.append(None)
     while len(streams) < len(variantNames): # Removes extra names
-        variantNames.pop
+        variantNames.pop()
     
     zipped = list(zip(streams,variantNames))
     
@@ -603,16 +651,22 @@ def mergeVariantsEqualDuration(streams, variantNames, inPlace = False):
 
 def mergePartAsOssia(mainpart, ossiapart, ossiaName, inPlace = False, compareByMeasureNumber = False, recurseInMeasures = False):
     '''
-    Some MusicXML files are generated with full parts that have only a few non-rest measures instead of ossia parts, such as those
+    Some MusicXML files are generated with full parts that have only a few non-rest measures 
+    instead of ossia parts, such as those
     created by Sibelius 7. This function
-    takes two streams (mainpart and ossiapart), the second interpreted as an ossia. It outputs a stream with the ossia part merged into the stream as a 
+    takes two streams (mainpart and ossiapart), the second interpreted as an ossia. 
+    It outputs a stream with the ossia part merged into the stream as a 
     group of variants.
     
-    If compareByMeasureNumber is True, then the ossia measures will be paired with the measures in the mainpart that have the
-    same measure.number. Otherwise, they will be paired by offset. In most cases these should have the same result.
+    If compareByMeasureNumber is True, then the ossia measures will be paired with the 
+    measures in the mainpart that have the
+    same measure.number. Otherwise, they will be paired by offset. In most cases 
+    these should have the same result.
     
-    Note that this method has no way of knowing if a variant is supposed to be a different duration than the segment of stream which it replaces
-    because that information is not contained in the format of score this method is designed to deal with.
+    Note that this method has no way of knowing if a variant is supposed to be a 
+    different duration than the segment of stream which it replaces
+    because that information is not contained in the format of score this method is 
+    designed to deal with.
     
     
     >>> mainstream = converter.parse("tinynotation: 4/4   A4 B4 C4 D4   E1    F2 E2     E8 F8 F4 G2   G2 G4 F4   F4 F4 F4 F4   G1      ")
@@ -733,7 +787,7 @@ def mergePartAsOssia(mainpart, ossiapart, ossiaName, inPlace = False, compareByM
 
 #------ Public Helper Functions
 
-def addVariant(s, startOffset, sVariant, variantName = None, variantGroups = None, replacementDuration = None):
+def addVariant(s, startOffset, sVariant, variantName=None, variantGroups=None, replacementDuration=None):
     '''
     Takes a stream, the location of the variant to be added to that stream (startOffset), the content of the
     variant to be added (sVariant), and the duration of the section of the stream which the variant
@@ -830,10 +884,13 @@ def addVariant(s, startOffset, sVariant, variantName = None, variantGroups = Non
 def refineVariant(s, sVariant, inPlace = False):
     '''
     Given a stream and variant contained in that stream, returns a stream with that variant 'refined.'
+    
     It is refined in the sense that, (with the best estimates) measures which have been determined
-    to be related are merged within the measure. Suppose a four-bar phrase in a piece is a slightly
+    to be related are merged within the measure. 
+    
+    Suppose a four-bar phrase in a piece is a slightly
     different five-bar phrase in a variant. In the variant, every F# has been replaced by an F,
-    and the last bar is repeated. Given this streams, mergeVariantMeasureStreams would return
+    and the last bar is repeated. Given these streams, mergeVariantMeasureStreams would return
     the first stream with a single variant object containing the entire 5 bars of the variant.
     Calling refineVariant on this stream and that variant object would result in a variant object
     in the measures for each F#/F pair, and a variant object containing the added bar at the end.
@@ -900,7 +957,7 @@ def refineVariant(s, sVariant, inPlace = False):
     
     '''
     # stream that will be returned
-    if not (sVariant in s.variants):
+    if sVariant not in s.variants:
         raise VariantException('%s not found in stream %s.' % (sVariant, s))
     
     if inPlace is True:
@@ -1471,8 +1528,8 @@ def _doVariantFixingOnStream(s, variantNames = None):
     
     
     >>> #                                           *                           *                                            *                                *                           *
-    >>> s = converter.parse("tinynotation: 4/4                    d4 e4 f4 g4   a2 b-4 a4    g4 a8 g8 f4 e4    d2 a2                        d4 e4 f4 g4    a2 b-4 a4    g4 a8 b-8 c'4 c4    f1    ")
-    >>> s2 = converter.parse("tinynotation: 4/4      a4 b c d     d4 e4 f4 g4   a2. b-8 a8   g4 a8 g8 f4 e4    d2 a2   d4 f4 a2  d4 f4 AA2  d4 e4 f4 g4                 g4 a8 b-8 c'4 c4          ")
+    >>> s = converter.parse("tinynotation: 4/4                    d4 e4 f4 g4   a2 b-4 a4    g4 a8 g8 f4 e4    d2 a2                        d4 e4 f4 g4    a2 b-4 a4    g4 a8 b-8 c'4 c4    f1    ", makeNotation=False)
+    >>> s2 = converter.parse("tinynotation: 4/4      a4 b c d     d4 e4 f4 g4   a2. b-8 a8   g4 a8 g8 f4 e4    d2 a2   d4 f4 a2  d4 f4 AA2  d4 e4 f4 g4                 g4 a8 b-8 c'4 c4          ", makeNotation=False)
     >>> #                                        initial insertion              replacement                            insertion                            deletion                        final deletion
     >>> s.makeMeasures(inPlace = True)
     >>> s2.makeMeasures(inPlace = True)
@@ -1507,8 +1564,8 @@ def _doVariantFixingOnStream(s, variantNames = None):
     
     This also works on streams with variants that contain notes and rests rather than measures.
     
-    >>> s = converter.parse('tinyNotation: 4/4                     e4 b b b   f4 f f f   g4 a a a       ')
-    >>> v1Stream = converter.parse('tinyNotation: 4/4   a4 a a a                                       ')
+    >>> s = converter.parse('tinyNotation: 4/4                     e4 b b b   f4 f f f   g4 a a a       ', makeNotation=False)
+    >>> v1Stream = converter.parse('tinyNotation: 4/4   a4 a a a                                       ', makeNotation=False)
     >>> #                                               initial insertion     deletion
     >>> v1 = variant.Variant(v1Stream.notes)
     >>> v1.replacementDuration = 0.0
@@ -1590,8 +1647,8 @@ def _getNextElements(s, v, numberOfElements = 1):
     
     
     >>> #                                                   *                       *
-    >>> s1 = converter.parse('tinyNotation: 4/4             b4 c d e    f4 g a b   d4 e f g   ')
-    >>> s2 = converter.parse('tinyNotation: 4/4 e4 f g a    b4 c d e               d4 e f g   ')
+    >>> s1 = converter.parse('tinyNotation: 4/4             b4 c d e    f4 g a b   d4 e f g   ', makeNotation=False)
+    >>> s2 = converter.parse('tinyNotation: 4/4 e4 f g a    b4 c d e               d4 e f g   ', makeNotation=False)
     >>> #                                       insertion               deletion
     >>> s1.makeMeasures(inPlace = True)
     >>> s2.makeMeasures(inPlace = True)
@@ -1604,8 +1661,8 @@ def _getNextElements(s, v, numberOfElements = 1):
     
     This also works on streams with variants that contain notes and rests rather than measures.
     
-    >>> s = converter.parse('tinyNotation: 4/4                     e4 b b b   f4 f f f   g4 a a a       ')
-    >>> v1Stream = converter.parse('tinyNotation: 4/4   a4 a a a                                       ')
+    >>> s = converter.parse('tinyNotation: 4/4                     e4 b b b   f4 f f f   g4 a a a       ', makeNotation=False)
+    >>> v1Stream = converter.parse('tinyNotation: 4/4   a4 a a a                                       ', makeNotation=False)
     >>> #                                               initial insertion
     >>> v1 = variant.Variant(v1Stream.notes)
     >>> v1.replacementDuration = 0.0
@@ -1681,8 +1738,8 @@ def _getPreviousElements(s, v, numberOfElements = 1):
     
     This also works on streams with variants that contain notes and rests rather than measures.
     
-    >>> s = converter.parse('tinyNotation: 4/4         b4 b b a            e4 b b b      g4 e e e       ')
-    >>> v1Stream = converter.parse('tinyNotation: 4/4           f4 f f f                                ')
+    >>> s = converter.parse('tinyNotation: 4/4         b4 b b a            e4 b b b      g4 e e e       ', makeNotation=False)
+    >>> v1Stream = converter.parse('tinyNotation: 4/4           f4 f f f                                ', makeNotation=False)
     >>> #                                                       insertion                final deletion
     >>> v1 = variant.Variant(v1Stream.notes)
     >>> v1.replacementDuration = 0.0
@@ -1791,40 +1848,24 @@ class Variant(base.Music21Object):
         if 'name' in keywords:
             self.groups.append(keywords['name'])
 
-    def __deepcopy__(self, memo):
-        new = self.__class__()
-        old = self
-        for name in self.__dict__:
-            if name.startswith('__'):
-                continue
-            if name == '_cache':
-                continue
-            part = getattr(self, name)
-            # functionality duplicated from Music21Object
-            if name == '_activeSite':
-                setattr(new, name, self.activeSite)
-            elif name == 'sites':
-                newValue = copy.deepcopy(part, memo)
-                newValue.containedById = id(new)
-                setattr(new, name, newValue)
-            # do not deepcopy _stream, as this will copy the 
-            # contained objects
-            # this means that the new object is not really free of the 
-            # old elements it described
-            elif name == '_stream':
-                # this passes references; does not copy contained
-                #for c in old._stream:
-                #    new._stream.insert(c.getOffsetBySite(old._stream), c)
-                # this copies the contained stream
-                new._stream = copy.deepcopy(old._stream)
-            else: 
-                #environLocal.printDebug(['Spanner.__deepcopy__', name])
-                newValue = copy.deepcopy(part, memo)
-                setattr(new, name, newValue)
-        # do after all other copying
-        new._idLastDeepCopyOf = id(self)
+
+    def _deepcopySubclassable(self, memo=None, ignoreAttributes=None, removeFromIgnore=None):
+        '''
+        see __deepcopy__ for tests and docs
+        '''
+        # NOTE: this is a performance critical operation        
+        defaultIgnoreSet = {'_cache'}
+        if ignoreAttributes is None:
+            ignoreAttributes = defaultIgnoreSet
+        else:
+            ignoreAttributes = ignoreAttributes | defaultIgnoreSet
+
+        new = super(Variant, self)._deepcopySubclassable(memo, ignoreAttributes, removeFromIgnore)
+
         return new
 
+    def __deepcopy__(self, memo=None):
+        return self._deepcopySubclassable(memo)
 
     #---------------------------------------------------------------------------
     # as _stream is a private Stream, unwrap/wrap methods need to override
@@ -2039,11 +2080,11 @@ class Variant(base.Music21Object):
         are captured. Elsewhere, all elements are captured.
         
         
-        >>> s = converter.parse("tinynotation: 4/4 d4 e4 f4 g4   a2 b-4 a4    g4 a8 g8 f4 e4    d2 a2                  d4 e4 f4 g4    a2 b-4 a4    g4 a8 b-8 c'4 c4    f1",)
+        >>> s = converter.parse("tinynotation: 4/4 d4 e4 f4 g4   a2 b-4 a4    g4 a8 g8 f4 e4    d2 a2                  d4 e4 f4 g4    a2 b-4 a4    g4 a8 b-8 c'4 c4    f1", makeNotation=False)
         >>> s.makeMeasures(inPlace = True)
-        >>> v1stream = converter.parse("tinynotation: 4/4        a2. b-8 a8")
-        >>> v2stream1 = converter.parse("tinynotation: 4/4                                       d4 f4 a2")
-        >>> v2stream2 = converter.parse("tinynotation: 4/4                                                  d4 f4 AA2")
+        >>> v1stream = converter.parse("tinynotation: 4/4        a2. b-8 a8", makeNotation=False)
+        >>> v2stream1 = converter.parse("tinynotation: 4/4                                       d4 f4 a2", makeNotation=False)
+        >>> v2stream2 = converter.parse("tinynotation: 4/4                                                  d4 f4 AA2", makeNotation=False)
         
         >>> v1 = variant.Variant()
         >>> v1measure = stream.Measure()
@@ -2337,9 +2378,7 @@ class Test(unittest.TestCase):
         return out
 
     def testBasicA(self):
-        from music21 import variant
-
-        o = variant.Variant()
+        o = Variant()
         o.append(note.Note('G3', quarterLength=2.0))
         o.append(note.Note('f3', quarterLength=2.0))
         
@@ -2356,9 +2395,7 @@ class Test(unittest.TestCase):
         '''
         Testing relaying attributes requests to private Stream with __getattr__
         '''
-        from music21 import variant
-
-        v = variant.Variant()
+        v = Variant()
         v.append(note.Note('G3', quarterLength=2.0))
         v.append(note.Note('f3', quarterLength=2.0))
         # these are Stream attributes
@@ -2378,20 +2415,17 @@ class Test(unittest.TestCase):
     def testVariantGroupA(self):
         '''Variant groups are used to distinguish
         '''
-        from music21 import variant
-        v1 = variant.Variant()
+        v1 = Variant()
         v1.groups.append('alt-a')
 
-        v1 = variant.Variant()
+        v1 = Variant()
         v1.groups.append('alt-b')
         self.assertEqual('alt-b' in v1.groups, True)
 
 
     def testVariantClassA(self):
-        from music21 import variant
-
         m1 = stream.Measure()
-        v1 = variant.Variant()
+        v1 = Variant()
         v1.append(m1)
 
         self.assertEqual(v1.isClassOrSubclass(['Variant']), True)
@@ -2400,14 +2434,12 @@ class Test(unittest.TestCase):
         self.assertEqual(v1.hasElementOfClass('Measure'), True)
 
     def testDeepCopyVariantA(self):
-        from music21 import variant
-    
         s = stream.Stream()
         s.repeatAppend(note.Note('G4'), 8)
         vn1 = note.Note('F#4')
         vn2 = note.Note('A-4')
     
-        v1 = variant.Variant([vn1, vn2])
+        v1 = Variant([vn1, vn2])
         v1Copy = copy.deepcopy(v1)
         # copies stored objects; they point to the different Notes vn1/vn2
         self.assertEqual(v1Copy[0] is v1[0], False)
@@ -2434,13 +2466,11 @@ class Test(unittest.TestCase):
 
 
     def testDeepCopyVariantB(self):
-        from music21 import variant
-    
         s = stream.Stream()
         s.repeatAppend(note.Note('G4'), 8)
         vn1 = note.Note('F#4')
         vn2 = note.Note('A-4')
-        v1 = variant.Variant([vn1, vn2])
+        v1 = Variant([vn1, vn2])
         s.insert(5, v1)
     
         # as we deepcopy the elements in the variants, we have new Notes
